@@ -10,6 +10,7 @@ import numpy as np
 import logging
 
 ### I am trying GitHUB
+## Still trying
 
 
 #---------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
