@@ -10,7 +10,6 @@ import numpy as np
 import logging
 
 
-### Second trial is ongoing 
 
 
 
