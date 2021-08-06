@@ -1,7 +1,7 @@
 from functions_hems import *
 from pymodbus.constants import Endian
 from pymodbus.payload import BinaryPayloadDecoder
-from pymodbus.payload import BinaryPayloadBuilder
+# from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 import pandas as pd 
 import os
