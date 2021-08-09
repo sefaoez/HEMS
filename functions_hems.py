@@ -48,6 +48,7 @@ def read_register(address, count, unit, station_ip):
         if (result.isError() == True):
             print("Test: Register couldn't be read")
             S_register_read = False
+            decoded = 0
 
         else:
             print("Test: Register could be read")
@@ -61,22 +62,18 @@ def write_register_unint(value, address, count, unit, station_ip):
 
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
     builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_uint(value)		
+    builder.add_16bit_uint(int(value))		
     registers = builder.to_registers()
     charge_station.write_registers(address, count, unit=unit)
-
-    
+   
 
 def write_register_int(value, address, count, unit, station_ip):
 
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
     builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_int(value)		
+    builder.add_16bit_int(int(value))		
     registers = builder.to_registers()
     charge_station.write_registers(address, count, unit=unit)
-
-    
-
 
 
 def number_of_cars(openwb,webasto):
@@ -579,7 +576,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
 
 def charge_webasto(webasto):
     if (webasto.connection_state == True):
-        webasto_charge_current = webasto.charging_power / 230 ## Converting power to current, 1-phase
+        webasto_charge_current = webasto.charging_power / 0.230 ## Converting power to current, 1-phase
         print("Webasto charge curret is now:{}" .format(webasto_charge_current))
         write_register_unint(webasto_charge_current, 5004, 1, webasto.unit_id, webasto.ip)
     else:
@@ -591,7 +588,7 @@ def charge_webasto(webasto):
 
 def charge_openwb(openwb):
     if (openwb.connection_state == True):
-        openwb_charge_current = openwb.charging_power / 230 ## Converting power to current, 1-phase
+        openwb_charge_current = openwb.charging_power / 0.230 ## Converting power to current, 1-phase
         print("Openwb charge curret is now:{}" .format(openwb_charge_current))
         write_register_int(0, 112, 1, openwb.unit_id, openwb.ip) ## Setting it to Sofort - Laden
         write_register_int(openwb_charge_current, 10152, 1, openwb.unit_id, openwb.ip) ## Setting the current

@@ -15,10 +15,10 @@ import logging
 openwb = charging_station("192.168.4.1", 1, 11, 0, 0, 0, False, False, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)
 #openwb = charging_station("192.168.25.10", 1, 11, 0, 0, 0, False, False, 0, 0, 0, False)
 webasto = charging_station("192.168.123.123", 254, 11, 0, 0, 0, False, False, 0, 0, 0, False)
-hbattery = battery (50, 200, 7, 5, False, 0) # (soc, soc_max, soc_min, max_discharge_power, priority, battery_state)
+hbattery = battery (50, 200, 7, 4, False, 0) # (soc, soc_max, soc_min, max_discharge_power, priority, battery_state)
 grid_priority = False
 
-#-------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
+#----------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
 
 
 
@@ -33,7 +33,7 @@ all_inputs = pd.concat([pv_and_consumption, newdf], axis=1)
 counter = 0
 
 for i in range(all_inputs.shape[0]):
-    #sleep(60 -time() % 60)
+    sleep(60 -time() % 60)
     P_pv = all_inputs.iloc[i,1] * 36 * 0.2 / 1000 # for a PV panel with 36 m2 and 0,2 efficiency in kW
     P_house = all_inputs.iloc[i,2] * 60 # House consumption in kW
     c_elec = all_inputs.iloc[i,3]   
