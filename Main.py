@@ -10,9 +10,6 @@ import numpy as np
 import logging
 
 
-
-
-
 #---------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
 
 openwb = charging_station("192.168.4.1", 1, 11, 0, 0, 0, False, False, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)

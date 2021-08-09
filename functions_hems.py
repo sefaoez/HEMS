@@ -76,18 +76,32 @@ def number_of_cars(openwb,webasto):
     get_register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip) 
     #register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
     #register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip)  
-    if (get_register_openwb[1] == True): 
-        register_openwb = get_register_openwb[0]
-        print("Register value in OpenWB is: {}" .format(register_openwb))
+    
+   
+    if (get_register_openwb[2] == True): 
+        print("Connection to OpenWB is succesfull")
+        if (get_register_openwb[1] == True):
+            register_openwb = get_register_openwb[0]
+            print("Register value in OpenWB is: {}" .format(register_openwb)) 
+        else:
+            print("Register couldn't be read due to Modbus Error")
+            register_openwb = 100 # Arbitrary number for error
     else: 
         register_openwb = 100 # Arbitrary number for error
         print ("Connection to OpenWB failed.")      
-    if (get_register_webasto[1] == True):
-        register_webasto = get_register_webasto [0]
-        print("Register value in Webasto is: {}" .format(register_webasto))
+ 
+     
+    if (get_register_webasto[2] == True):
+        print("Connection to Webasto is succesfull")
+        if (get_register_webasto[1] == True):
+            register_webasto = get_register_webasto [0]
+            print("Register value in Webasto is: {}" .format(register_webasto))
         
-    else:
-        register_webasto = 100 # Arbitrary number for error 
+        else:
+            register_webasto = 100 # Arbitrary number for error 
+            print("Register couldn't be read due to Modbus error")
+    else: 
+        register_webasto = 100 # Arbitrary number for error
         print ("Connection to Webasto failed.")
 
     connection_state_openwb = False
@@ -110,7 +124,8 @@ def number_of_cars(openwb,webasto):
         connection_state_openwb = False
         connection_state_webasto = False
     else: 
-        n = 3
+        n = 0
+
 
     return (n,connection_state_openwb,connection_state_webasto)
 
