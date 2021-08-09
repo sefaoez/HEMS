@@ -97,6 +97,8 @@ for i in range(all_inputs.shape[0]):
     print("Solar production power is {} kW " .format(round(P_pv,2)))
     print("House energy consumption power is {} kW " .format(round(P_house,2)))
     print("Energy price is {} is Cents / kWh " .format(round(c_elec,2)))
+    
+ 
 
     counter = counter + 1
 

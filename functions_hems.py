@@ -32,7 +32,7 @@ class battery:
         home.battery_state = battery_state
 
 
-def read_register(address,count, unit, station_ip):
+def read_register(address, count, unit, station_ip):
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
    
     if (charge_station.connect() == False):
@@ -57,18 +57,26 @@ def read_register(address,count, unit, station_ip):
     return decoded, S_register_read, S_connection
 
 
-def write_register_unint(value, register_number, unit_id):
-	builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-	builder.add_16bit_uint(value)		
-	registers = builder.to_registers()
-	chargeStationModbus.write_registers(register_number, registers, unit=unit_id)
+def write_register_unint(value, address, count, unit, station_ip):
 
+    charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
+    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+    builder.add_16bit_uint(value)		
+    registers = builder.to_registers()
+    charge_station.write_registers(address, count, unit=unit)
 
-def write_register_int(value, register_number, unit_id):
-	builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-	builder.add_16bit_int(limitChargeStationCurrent(value))		
-	registers = builder.to_registers()
-	chargeStationModbus.write_registers(register_number, registers, unit=unit_id)
+    
+
+def write_register_int(value, address, count, unit, station_ip):
+
+    charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
+    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+    builder.add_16bit_int(value)		
+    registers = builder.to_registers()
+    charge_station.write_registers(address, count, unit=unit)
+
+    
+
 
 
 def number_of_cars(openwb,webasto):
@@ -454,7 +462,8 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
             print("Error: Charging power for OpenWB couldn't be calculated.")
         openwb.charging_power = P_charge
         print ("The openWB charge power is: {} kW" .format(openwb.charging_power))   
-    
+        charge_openwb(openwb)
+
     elif (webasto.charge_priority):
         print("Charging power for webasto is calculating.")
         P_bat_discharge = max(0,min(hbattery.max_discharge_power, webasto.max_charge_power - (P_pv - P_house))) # Setting boundaries for P_bat,discharge        
@@ -535,7 +544,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
             print("Error: Charging power for webasto couldn't be calculated.")
         webasto.charging_power = P_charge
         print ("The webasto charge power is: {} kW" .format(webasto.charging_power))   
-
+        charge_webasto(webasto)
     elif (hbattery.priority):
         P_grid_charge= 0 
         P_bat_discharge = 0 
@@ -568,4 +577,29 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     print ("The total power got from the grid is: {} kW". format(P_grid)) 
     return
 
+def charge_webasto(webasto):
+    if (webasto.connection_state == True):
+        webasto_charge_current = webasto.charging_power / 230 ## Converting power to current, 1-phase
+        print("Webasto charge curret is now:{}" .format(webasto_charge_current))
+        write_register_unint(webasto_charge_current, 5004, 1, webasto.unit_id, webasto.ip)
+    else:
+        print ("Connection to webasto is interrupted")
+        webasto_charge_current = 0
+        print("Charging station webasto is not controlled by HEMS.")
+        print("Webasto charge curret is now:{}" .format(webasto_charge_current))
+    return
 
+def charge_openwb(openwb):
+    if (openwb.connection_state == True):
+        openwb_charge_current = openwb.charging_power / 230 ## Converting power to current, 1-phase
+        print("Openwb charge curret is now:{}" .format(openwb_charge_current))
+        write_register_int(0, 112, 1, openwb.unit_id, openwb.ip) ## Setting it to Sofort - Laden
+        write_register_int(openwb_charge_current, 10152, 1, openwb.unit_id, openwb.ip) ## Setting the current
+        write_register_int(1, 10151, 1, openwb.unit_id, openwb.ip) ## Enable charge point
+        
+    else:
+        #print ("Connection to webasto is interrupted")
+        openwb_charge_current = 0
+        print("Charging station openwb is not controlled by HEMS.")
+        print("Openwb charge curret is now:{}" .format(openwb_charge_current))
+    return
