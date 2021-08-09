@@ -62,7 +62,7 @@ def write_register_unint(value, address, count, unit, station_ip):
 
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
     builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_uint(int(value))		
+    builder.add_16bit_uint(value)		
     registers = builder.to_registers()
     charge_station.write_registers(address, count, unit=unit)
    
@@ -71,7 +71,7 @@ def write_register_int(value, address, count, unit, station_ip):
 
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
     builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_int(int(value))		
+    builder.add_16bit_int(value)		
     registers = builder.to_registers()
     charge_station.write_registers(address, count, unit=unit)
 
