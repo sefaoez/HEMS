@@ -8,13 +8,15 @@ import os
 from time import time, sleep
 import numpy as np
 import logging
+from tabulate import tabulate
+
 
 #--------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
 
-openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)
+openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)
 #openwb = charging_station('192.168.25.10', 1, 11, 0, 0, 0, False, False, 0, 0, 0, False)
-webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0, 0, 0, False)
-hbattery = battery (50, 200, 7, 4, False, 0) # (soc, soc_max, soc_min, max_discharge_power, priority, battery_state)
+webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False)
+hbattery = battery (50, 200, 7, 4, False, 0, 0) # (soc, soc_max, soc_min, max_discharge_power, priority, battery_state)
 grid_priority = False
 
 #----------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
@@ -28,6 +30,8 @@ all_inputs = pd.concat([pv_and_consumption, newdf], axis=1) #Concating all input
 #----------------------------------------------------------------------------------------------------------------------------------------------#
 
 counter = 0
+total_charging_cost = 0 
+total_charging_profit = 0
 
 for i in range(all_inputs.shape[0]):
     sleep(60 -time() % 60) 
@@ -44,7 +48,8 @@ for i in range(all_inputs.shape[0]):
     if results_cars [0] == 0:
         
         grid_priority = priority_check(openwb, webasto, hbattery, grid_priority, results_cars)
-        charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
+        calculated_expensiveness = (0,0,0,0)
+        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
  
     elif results_cars [0] == 1:
         if (counter == 0 or results_cars != results_cars_last):
@@ -66,7 +71,7 @@ for i in range(all_inputs.shape[0]):
         calculated_expensiveness = electricity_price_expensiveness(c_elec,openwb, webasto, all_inputs, counter)
         openwb.electricity_cheap = calculated_expensiveness[0]
         webasto.electricity_cheap = calculated_expensiveness[1]
-        charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
+        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
 
     elif results_cars [0] == 2:
         if (counter == 0 or results_cars != results_cars_last):
@@ -84,18 +89,57 @@ for i in range(all_inputs.shape[0]):
         grid_priority = priority_check(openwb,webasto,hbattery,results_cars, grid_priority)
         openwb.electricity_cheap = calculated_expensiveness[0]
         webasto.electricity_cheap = calculated_expensiveness[1]
-        charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
+        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
 
     else:
         print("Error, number of cars don't meet the criterias")
-    
-    print("OpenWB connection state is {}. Maximum charging power is {} kW . User set requested energy of {} kWh and maximum energy of {} kWh for OpenWB. Given duration for charging is {} minutes and current price is cheap: {}  " .format(openwb.connection_state, openwb.max_charge_power, openwb.e_demand, openwb.e_max_demand, openwb.charge_duration, openwb.electricity_cheap))
-    print("Webasto connection state is {}. Maximum charging power is {} kW . User set requested energy of {} kWh and maximum energy of {} kWh for OpenWB. Given duration for charging is {} minutes and current price is cheap: {}  " .format(webasto.connection_state, webasto.max_charge_power, webasto.e_demand, webasto.e_max_demand, webasto.charge_duration, webasto.electricity_cheap))
-    print("Solar production power is {} kW " .format(round(P_pv,2)))
-    print("House energy consumption power is {} kW " .format(round(P_house,2)))
-    print("Energy price is {} is Cents / kWh " .format(round(c_elec,2)))
-    
+  
+    charging_cost = calculated_power_values[1] * c_elec / 6000
+    charging_profit = calculated_power_values[3] / 6000 - charging_cost  
+    total_charging_cost = total_charging_cost + charging_cost
+    total_charging_profit = total_charging_profit + charging_profit   
+   
+    l = [["HEMS Verbindung", results_cars[3], results_cars[4]], 
+         ["Auto - Angeschlossen", openwb.connection_state, webasto.connection_state], 
+         ["Ladevorgang", openwb.charge_priority, webasto.charge_priority], 
+         ["Ladeleistung [kW]", openwb.charging_power, webasto.charging_power], 
+         ["PV - Strom Anteil [%]", (openwb.pv_elec / openwb.charging_power) if openwb.charging_power !=0 else 0, (webasto.pv_elec / webasto.charging_power) if webasto.charging_power !=0 else 0],
+         ["Rest - Zeit [m]", openwb.charge_duration - counter if openwb.charge_duration != 0 else 0, webasto.charge_duration - counter if webasto.charge_duration != 0 else 0],
+         ["Durchschnittpreis Strom [c./ kWh]", calculated_expensiveness[2], calculated_expensiveness[3]],
+         ["Gefragte Energiemenge [kWh]", openwb.e_demand, webasto.e_demand],
+         ["Gefragte maximale Energiemenge [kWh]", openwb.e_max_demand, webasto.e_max_demand],
+         ["Ladezustand (Maximale Energie) [%]", (openwb.charged_energy / openwb.e_max_demand) if openwb.e_max_demand != 0 else 0, (webasto.charged_energy / webasto.e_max_demand) if webasto.e_max_demand != 0 else 0 ]]
+   
+    table_charge_stations = tabulate(l, headers =['Ladestationen', 'OpenWB', 'Webasto'], tablefmt='orgtbl')
+       
+    m = [["Aktueller Strompreis [c./ kWh]", round(c_elec,2)],
+         ["Aktuelle Stromnetzverwendung [kW]", round(calculated_power_values[0],2)],
+         ["Aktuelle Stromnetzverwendung für Laden [kW]", round(calculated_power_values[1],2)],
+         ["Aktuelle Ladekosten [€] ", round(charging_cost,2)],
+         ["Aktueller Gewinn durch HEMS [€]", round(charging_profit,2)],
+         ["Gesamte Ladekosten [€]", round(total_charging_cost,2)],
+         ["Gesamter Gewinn durch HEMS [€]", round(total_charging_profit,2)]]
+         
+    table_balance_sheet = tabulate(m, headers =['Bilanz', 'Wert'], tablefmt='orgtbl')
  
+    n = [["PV Energie Erzeugung [kW]", round(P_pv,2)],
+         ["Haushalt Stromverbrauch [kW]", round(P_house,2)],
+         ["Heimspeicher Leistung [kW]", round(hbattery.used_power,2)],
+         ["Heimspeicher Ladezustand [%]", round(hbattery.soc / hbattery.soc_max,2)]]
+         
+    table_house = tabulate(n, headers =['Haus', 'Wert'], tablefmt='orgtbl')    
+    
+    print("---------------------------------------------------------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------------------------------------------------------")
+    print(table_charge_stations)
+    print("---------------------------------------------------------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------------------------------------------------------")
+    print(table_balance_sheet)
+    print("---------------------------------------------------------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------------------------------------------------------")
+    print(table_house)
+    print("---------------------------------------------------------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------------------------------------------------------")
 
     counter = counter + 1
 

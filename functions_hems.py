@@ -11,7 +11,7 @@ class charging_station:
     #The class is created for different charging_stations. Parameters starting from e_demand until electricity_cheap should be set either to 0 or False. 
     #The IP, unit_id and max charge power can be taken from product manual.
     
-    def __init__(self, ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy,charging_power, electricity_cheap):
+    def __init__(self, ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, pv_elec, electricity_cheap):
         self.ip = ip
         self.unit_id = unit_id
         self.max_charge_power = max_charge_power
@@ -23,6 +23,7 @@ class charging_station:
         self.charging_state = charging_state # 0 when lower than requested energy, 1 when more than requested energy
         self.charged_energy = charged_energy
         self.charging_power = charging_power
+        self.pv_elec = pv_elec
         self.electricity_cheap = electricity_cheap
 
 
@@ -30,13 +31,14 @@ class battery:
     
     #The class battery is used to simulate the home battery. The values can be given arbitrary. 
     
-    def __init__(home, soc, soc_max, soc_min, max_discharge_power, priority, battery_state):
+    def __init__(home, soc, soc_max, soc_min, max_discharge_power, priority, battery_state, used_power):
         home.soc = soc
         home.soc_max = soc_max
         home.soc_min = soc_min
         home.max_discharge_power = max_discharge_power
         home.priority = priority
         home.battery_state = battery_state
+        home.used_power = used_power
 
 
 def read_register(address, count, unit, station_ip):
@@ -135,35 +137,35 @@ def number_of_cars(openwb,webasto):
     
     get_register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
     get_register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip) 
-    #register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
-    #register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip)  
-    
+
+    openwb_hems_connection_state = get_register_openwb[2]
+    webasto_hems_connection_state =get_register_webasto[2]
    
     if (get_register_openwb[2] == True): 
-        print("Connection to OpenWB is succesfull")
+        #print("Connection to OpenWB is succesfull")
         if (get_register_openwb[1] == True):
             register_openwb = get_register_openwb[0]
-            print("Register value in OpenWB is: {}" .format(register_openwb)) 
+            #print("Register value in OpenWB is: {}" .format(register_openwb)) 
         else:
             print("Register couldn't be read due to Modbus Error")
-            register_openwb = 100 # Arbitrary number for error
+            #register_openwb = 100 # Arbitrary number for error
     else: 
         register_openwb = 100 # Arbitrary number for error
-        print ("Connection to OpenWB failed.")      
+        #print ("Connection to OpenWB failed.")      
  
      
     if (get_register_webasto[2] == True):
-        print("Connection to Webasto is succesfull")
+        #print("Connection to Webasto is succesfull")
         if (get_register_webasto[1] == True):
             register_webasto = get_register_webasto [0]
-            print("Register value in Webasto is: {}" .format(register_webasto))
+            #print("Register value in Webasto is: {}" .format(register_webasto))
         
         else:
             register_webasto = 100 # Arbitrary number for error 
-            print("Register couldn't be read due to Modbus error")
+            #print("Register couldn't be read due to Modbus error")
     else: 
         register_webasto = 100 # Arbitrary number for error
-        print ("Connection to Webasto failed.")
+        #print ("Connection to Webasto failed.")
 
     connection_state_openwb = False
     connection_state_webasto = False
@@ -188,7 +190,7 @@ def number_of_cars(openwb,webasto):
         n = 0
 
 
-    return (n,connection_state_openwb,connection_state_webasto)
+    return (n, connection_state_openwb, connection_state_webasto, openwb_hems_connection_state, webasto_hems_connection_state)
 
 
 def pv_excess_power(P_pv, P_house):
@@ -536,9 +538,13 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
 
         else:
             print("Error: Charging power for OpenWB couldn't be calculated.")
+        
+        openwb.pv_elec = P_positive_excess_power / P_charge
         openwb.charging_power = P_charge
-        print ("The openWB charge power is: {} kW" .format(openwb.charging_power))   
+        #print ("The openWB charge power is: {} kW" .format(openwb.charging_power))   
         charge_openwb(openwb)
+
+       
 
     elif (webasto.charge_priority):
         print("Charging power for webasto is calculating.")
@@ -550,6 +556,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
             P_charge = P_grid_charge + P_positive_excess_power + P_bat_discharge
             webasto.charged_energy = webasto.charged_energy + P_charge / 60 # Charged energy in a minute in kWh
             hbattery.soc= hbattery.soc- P_bat_discharge / 60 #  Used battery energy
+            
 
 
         elif (webasto.charging_state == 0 and excess_state == True and battery_state != 0 and webasto.electricity_cheap == False):
@@ -618,10 +625,13 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
 
         else:
             print("Error: Charging power for webasto couldn't be calculated.")
+        
+        webasto.pv_elec = P_positive_excess_power / P_charge
         webasto.charging_power = P_charge
-        print ("The webasto charge power is: {} kW" .format(webasto.charging_power))   
+        #print ("The webasto charge power is: {} kW" .format(webasto.charging_power))   
         charge_webasto(webasto)
     elif (hbattery.priority):
+        P_charge = 0
         P_grid_charge= 0 
         P_bat_discharge = 0 
         P_feed_in = max(0,P_positive_excess_power - hbattery.max_discharge_power)
@@ -633,6 +643,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
             print("There is no excess power and battery will be charged, as soon as excess PV power is present")
 
     elif (grid_priority):
+        P_charge = 0
         P_grid_charge= 0 
         P_bat_discharge = 0
         if (excess_state == True):
@@ -643,7 +654,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     else:
         print("Error: No priority could be set.")
         
-       
+      
     P_grid = P_house + P_grid_charge - P_pv
     
     #print ("The exchanged power with grid for charging is: {} kW" .format(P_grid_charge))
@@ -651,7 +662,8 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     #print ("Used battery power for charging is: {} kW" .format(P_bat_discharge))
     #print ("The power is fed into the grid. The feed - in power is: {} kW". format(P_feed_in)) 
     #print ("The total power got from the grid is: {} kW". format(P_grid)) 
-    return
+    
+    return P_grid, P_grid_charge, P_feed_in, P_charge
 
 def charge_webasto(webasto):
     if (webasto.connection_state == True):
