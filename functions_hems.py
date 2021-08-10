@@ -34,24 +34,24 @@ class battery:
 
 def read_register(address, count, unit, station_ip):
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-   
+    
     if (charge_station.connect() == False):
-        print("Test: Charge station is not connected to HEMS.")
+        #print("Test: Charge station is not connected to HEMS.")
         S_connection = False
         S_register_read = False
         decoded = 0
     else:     
-        print("Test: Connection to HEMS succesfull")
+        #print("Test: Connection to HEMS succesfull")
         S_connection = True
         
         result = charge_station.read_holding_registers(address, count,  unit=unit)
         if (result.isError() == True):
-            print("Test: Register couldn't be read")
+            #print("Test: Register couldn't be read")
             S_register_read = False
             decoded = 0
 
         else:
-            print("Test: Register could be read")
+            #print("Test: Register could be read")
             S_register_read = True
             decoder = BinaryPayloadDecoder.fromRegisters(result.registers, byteorder=Endian.Big, wordorder=Endian.Big)
             decoded = decoder.decode_16bit_uint() 
@@ -61,20 +61,50 @@ def read_register(address, count, unit, station_ip):
 def write_register_unint(value, address, count, unit, station_ip):
 
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_uint(value)		
-    registers = builder.to_registers()
-    charge_station.write_registers(address, count, unit=unit)
+
+    if (charge_station.connect() == False):
+        print("Test: Charge station is not connected, writing won't be proceeded")
+    else: 
+        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+        builder.add_16bit_uint(value)		
+        registers = builder.to_registers()
+        charge_station.write_registers(address, count, unit=unit)
    
 
 def write_register_int(value, address, count, unit, station_ip):
 
-    charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_int(value)		
-    registers = builder.to_registers()
-    charge_station.write_registers(address, count, unit=unit)
+    if (charge_station.connect() == False):
+        print("Test: Charge station is not connected, writing won't be proceeded")
+    else:
+        charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
+        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+        builder.add_16bit_int(value)		
+        registers = builder.to_registers()
+        charge_station.write_registers(address, count, unit=unit)
 
+
+def write_register_int_trial(value, address, unit, station_ip):
+
+    if (charge_station.connect() == False):
+        print("Test: Charge station is not connected, writing won't be proceeded")
+    else:
+        charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
+        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+        builder.add_16bit_int(value)		
+        registers = builder.to_registers()
+        charge_station.write_registers(address, registers, unit=unit)
+
+def write_register_unint_trial(value, address, unit, station_ip):
+
+    charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
+
+    if (charge_station.connect() == False):
+        print("Test: Charge station is not connected, writing won't be proceeded")
+    else: 
+        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+        builder.add_16bit_uint(value)		
+        registers = builder.to_registers()
+        charge_station.write_registers(address, registers, unit=unit)
 
 def number_of_cars(openwb,webasto):
     get_register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
