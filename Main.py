@@ -12,9 +12,9 @@ import logging
 
 #---------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
 
-openwb = charging_station("192.168.4.1", 1, 11, 0, 0, 0, False, False, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)
-#openwb = charging_station("192.168.25.10", 1, 11, 0, 0, 0, False, False, 0, 0, 0, False)
-webasto = charging_station("192.168.123.123", 254, 11, 0, 0, 0, False, False, 0, 0, 0, False)
+openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)
+#openwb = charging_station('192.168.25.10', 1, 11, 0, 0, 0, False, False, 0, 0, 0, False)
+webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0, 0, 0, False)
 hbattery = battery (50, 200, 7, 4, False, 0) # (soc, soc_max, soc_min, max_discharge_power, priority, battery_state)
 grid_priority = False
 
