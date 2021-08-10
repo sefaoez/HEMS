@@ -9,8 +9,7 @@ from time import time, sleep
 import numpy as np
 import logging
 
-
-#---------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
+#--------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
 
 openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)
 #openwb = charging_station('192.168.25.10', 1, 11, 0, 0, 0, False, False, 0, 0, 0, False)
@@ -20,33 +19,31 @@ grid_priority = False
 
 #----------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
 
-
-
 results_cars = number_of_cars(openwb,webasto) # (1,True,False)
-print(results_cars)
+pv_and_consumption = pd.read_excel(r'C:\Users\soe\Desktop\Input.xlsx') ## Reading inputs document containing solar production and household consumption
+df = pd.read_csv(r'C:\Users\soe\Desktop\Day-ahead Prices_201901010000-202001010000.csv') # Reading electricity prices
+newdf = pd.DataFrame(np.repeat(df.values,60,axis=0)) / 1000 * 100 + 23.37   ## Electricity price in from EUR/MWH to Cent/kWh + Other costst such as grid fees  Source: BDEW year 2019
+all_inputs = pd.concat([pv_and_consumption, newdf], axis=1) #Concating all inputs into one dataframe
 
-pv_and_consumption = pd.read_excel(r'C:\Users\soe\Desktop\Input.xlsx') ## Reading inputs document containing 
-df = pd.read_csv(r'C:\Users\soe\Desktop\Day-ahead Prices_201901010000-202001010000.csv')
-newdf = pd.DataFrame(np.repeat(df.values,60,axis=0)) / 1000 * 100 + 23.37   ## Electricity price in from EUR/MWH to Cent/kWh + Sonstige Kosten  Quelle: BDEW year 2019
-all_inputs = pd.concat([pv_and_consumption, newdf], axis=1)
+#----------------------------------------------------------------------------------------------------------------------------------------------#
 
 counter = 0
 
 for i in range(all_inputs.shape[0]):
-    sleep(60 -time() % 60)
-    P_pv = all_inputs.iloc[i,1] * 36 * 0.2 / 1000 # for a PV panel with 36 m2 and 0,2 efficiency in kW
-    P_house = all_inputs.iloc[i,2] * 60 # House consumption in kW
-    c_elec = all_inputs.iloc[i,3]   
+    sleep(60 -time() % 60) 
+    P_pv = all_inputs.iloc[i,1] * 36 * 0.2 / 1000 # Solar prodcution with a PV panel with 36 m2 and 0,2 efficiency in kW
+    P_house = all_inputs.iloc[i,2] * 60 # Household energy consumption in kW
+    c_elec = all_inputs.iloc[i,3] 
 
     results_cars_last = results_cars
-    results_cars = number_of_cars(openwb,webasto) #(1, True , False) 
+    results_cars = number_of_cars(openwb,webasto)  
     openwb.connection_state = results_cars[1]
     webasto.connection_state = results_cars[2]
     
 
     if results_cars [0] == 0:
         
-        grid_priority = 1
+        grid_priority = priority_check(openwb, webasto, hbattery, grid_priority, results_cars)
         charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
  
     elif results_cars [0] == 1:
