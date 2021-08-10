@@ -7,6 +7,16 @@ import logging
 
 
 class charging_station:
+    """
+    A utility that helps decode payload messages from a modbus
+    reponse message.  It really is just a simple wrapper around
+    the struct module, however it saves time looking up the format
+    strings. What follows is a simple example::
+
+        decoder = BinaryPayloadDecoder(payload)
+        first   = decoder.decode_8bit_uint()
+        second  = decoder.decode_16bit_uint()
+    """
     def __init__(self, ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy,charging_power, electricity_cheap):
         self.ip = ip
         self.unit_id = unit_id
