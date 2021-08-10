@@ -7,17 +7,11 @@ import logging
 
 
 class charging_station:
-    """
-    A utility that helps decode payload messages from a modbus
-    reponse message.  It really is just a simple wrapper around
-    the struct module, however it saves time looking up the format
-    strings. What follows is a simple example::
-
-        decoder = BinaryPayloadDecoder(payload)
-        first   = decoder.decode_8bit_uint()
-        second  = decoder.decode_16bit_uint()
-    """
-    def __init__(self, ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy,charging_power, electricity_cheap):
+    
+    #The class is created for different charging_stations. Parameters starting from e_demand until electricity_cheap should be set either to 0 or False. 
+    #The IP, unit_id and max charge power can be taken from product manual.
+    
+    def __init__(self, ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, pv_elec, electricity_cheap):
         self.ip = ip
         self.unit_id = unit_id
         self.max_charge_power = max_charge_power
@@ -29,20 +23,31 @@ class charging_station:
         self.charging_state = charging_state # 0 when lower than requested energy, 1 when more than requested energy
         self.charged_energy = charged_energy
         self.charging_power = charging_power
+        self.pv_elec = pv_elec
         self.electricity_cheap = electricity_cheap
 
 
 class battery:
-    def __init__(home, soc, soc_max, soc_min, max_discharge_power, priority, battery_state):
+    
+    #The class battery is used to simulate the home battery. The values can be given arbitrary. 
+    
+    def __init__(home, soc, soc_max, soc_min, max_discharge_power, priority, battery_state, used_power):
         home.soc = soc
         home.soc_max = soc_max
         home.soc_min = soc_min
         home.max_discharge_power = max_discharge_power
         home.priority = priority
         home.battery_state = battery_state
+        home.used_power = used_power
 
 
 def read_register(address, count, unit, station_ip):
+    
+    #This function reads the number of registers, which is equal to "count" in the "address". "Unit" and "station_ip" shall be taken from the charging station.
+    #It initializes first the ModbusClient and then reads the register as long as it is possible. Later it returns also the values "decoded", which is the value in the 
+    #register and "S_register_read", which gives true, if the register could be read and false, if not. "S_connection" deliver, if there has been a connection between
+    #slave and client
+    
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
     
     if (charge_station.connect() == False):
@@ -70,6 +75,8 @@ def read_register(address, count, unit, station_ip):
 
 def write_register_unint(value, address, count, unit, station_ip):
 
+    # TBF
+
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
 
     if (charge_station.connect() == False):
@@ -83,6 +90,8 @@ def write_register_unint(value, address, count, unit, station_ip):
 
 def write_register_int(value, address, count, unit, station_ip):
 
+    #TBF
+
     if (charge_station.connect() == False):
         print("Test: Charge station is not connected, writing won't be proceeded")
     else:
@@ -95,6 +104,8 @@ def write_register_int(value, address, count, unit, station_ip):
 
 def write_register_int_trial(value, address, unit, station_ip):
 
+    # TBF
+
     if (charge_station.connect() == False):
         print("Test: Charge station is not connected, writing won't be proceeded")
     else:
@@ -105,6 +116,8 @@ def write_register_int_trial(value, address, unit, station_ip):
         charge_station.write_registers(address, registers, unit=unit)
 
 def write_register_unint_trial(value, address, unit, station_ip):
+
+    # TBF
 
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
 
@@ -117,37 +130,42 @@ def write_register_unint_trial(value, address, unit, station_ip):
         charge_station.write_registers(address, registers, unit=unit)
 
 def number_of_cars(openwb,webasto):
+    
+    #This functions returns the number charging station to which cars are connected "n" and 
+    #whether the openWB or Webasto are connected in the connection_state_openwb or connection_state_webasto
+    
+    
     get_register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
     get_register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip) 
-    #register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
-    #register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip)  
-    
+
+    openwb_hems_connection_state = get_register_openwb[2]
+    webasto_hems_connection_state =get_register_webasto[2]
    
     if (get_register_openwb[2] == True): 
-        print("Connection to OpenWB is succesfull")
+        #print("Connection to OpenWB is succesfull")
         if (get_register_openwb[1] == True):
             register_openwb = get_register_openwb[0]
-            print("Register value in OpenWB is: {}" .format(register_openwb)) 
+            #print("Register value in OpenWB is: {}" .format(register_openwb)) 
         else:
             print("Register couldn't be read due to Modbus Error")
-            register_openwb = 100 # Arbitrary number for error
+            #register_openwb = 100 # Arbitrary number for error
     else: 
         register_openwb = 100 # Arbitrary number for error
-        print ("Connection to OpenWB failed.")      
+        #print ("Connection to OpenWB failed.")      
  
      
     if (get_register_webasto[2] == True):
-        print("Connection to Webasto is succesfull")
+        #print("Connection to Webasto is succesfull")
         if (get_register_webasto[1] == True):
             register_webasto = get_register_webasto [0]
-            print("Register value in Webasto is: {}" .format(register_webasto))
+            #print("Register value in Webasto is: {}" .format(register_webasto))
         
         else:
             register_webasto = 100 # Arbitrary number for error 
-            print("Register couldn't be read due to Modbus error")
+            #print("Register couldn't be read due to Modbus error")
     else: 
         register_webasto = 100 # Arbitrary number for error
-        print ("Connection to Webasto failed.")
+        #print ("Connection to Webasto failed.")
 
     connection_state_openwb = False
     connection_state_webasto = False
@@ -172,11 +190,12 @@ def number_of_cars(openwb,webasto):
         n = 0
 
 
-    return (n,connection_state_openwb,connection_state_webasto)
+    return (n, connection_state_openwb, connection_state_webasto, openwb_hems_connection_state, webasto_hems_connection_state)
 
 
 def pv_excess_power(P_pv, P_house):
 
+    # This function delivers true, if there is excess PV production and false, if the house consumption is more than PV generation.
     if P_pv > P_house:
         excess_state = True 
         print("PV generation is more than house consumption")
@@ -190,6 +209,10 @@ def pv_excess_power(P_pv, P_house):
 
 
 def read_user_inputs():
+    
+    # This function takes the inputs from the users and returns the values E_demand, E_max_demand and Charge_duration. 
+    # In case the E_max_demand is smaller than E_demand it returns the error and asks for the values again. 
+
     wrong_input = True
     while wrong_input:
         E_demand = int(input("Please specify the requested charging energy kWh: "))
@@ -202,6 +225,9 @@ def read_user_inputs():
 
 
 def battery_state_home_battery(hbattery):
+    
+    #This function return the state of the home battery, while comparing the current charged energy and maximum, i.e. minumum energy capactiy of the battery.
+    
     battery_state = 0
     if hbattery.soc == hbattery.soc_min:
         battery_state = 0 # "empty"
@@ -215,6 +241,9 @@ def battery_state_home_battery(hbattery):
 
 
 def ev_charging_state(E_charged, E_demand, E_max_demand):
+    
+    #The function compares the charged energy so far with E_demand and E_max_demand and delivers the charging state of the ev. 
+    
     if E_charged < E_demand:
         ev_charge_state = 0 # charge power didn't reach requested energy #
     elif E_charged == E_demand:
@@ -228,6 +257,9 @@ def ev_charging_state(E_charged, E_demand, E_max_demand):
 
 
 def priority_check(openwb, webasto, hbattery, grid_priority, results_cars):
+    
+    #This function sets priorities for the charging processes based on the number of cars connected and their charging states. 
+    
     if (results_cars [0] == 0):
         print("No car is connected")
         if (hbattery.battery_state <2):
@@ -377,7 +409,11 @@ def priority_check(openwb, webasto, hbattery, grid_priority, results_cars):
 
 
 def electricity_price_expensiveness(c_elec,openwb, webasto, all_inputs, counter):
-    #just_prices = all_inputs['Day-ahead-price']
+    
+    # This function calculates first the average price in c_elex_frame_x in the charge intervall given by the user. 
+    # It then compares theactual price with the average price and delivers true, if the electrictiy is cheap. 
+  
+
     just_prices = all_inputs.iloc[:,3]
 
     if (openwb.connection_state == True and webasto.connection_state == True):
@@ -412,6 +448,11 @@ def electricity_price_expensiveness(c_elec,openwb, webasto, all_inputs, counter)
 
 
 def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_priority):
+    
+    # This function calculates charging power and battery discharging power based on different conditions.
+
+
+    
     excess_state = pv_excess_power(P_pv, P_house)
     battery_state = hbattery.battery_state
     P_grid_charge = 0 
@@ -497,9 +538,13 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
 
         else:
             print("Error: Charging power for OpenWB couldn't be calculated.")
+        
+        openwb.pv_elec = P_positive_excess_power / P_charge
         openwb.charging_power = P_charge
-        print ("The openWB charge power is: {} kW" .format(openwb.charging_power))   
+        #print ("The openWB charge power is: {} kW" .format(openwb.charging_power))   
         charge_openwb(openwb)
+
+       
 
     elif (webasto.charge_priority):
         print("Charging power for webasto is calculating.")
@@ -511,6 +556,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
             P_charge = P_grid_charge + P_positive_excess_power + P_bat_discharge
             webasto.charged_energy = webasto.charged_energy + P_charge / 60 # Charged energy in a minute in kWh
             hbattery.soc= hbattery.soc- P_bat_discharge / 60 #  Used battery energy
+            
 
 
         elif (webasto.charging_state == 0 and excess_state == True and battery_state != 0 and webasto.electricity_cheap == False):
@@ -579,10 +625,13 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
 
         else:
             print("Error: Charging power for webasto couldn't be calculated.")
+        
+        webasto.pv_elec = P_positive_excess_power / P_charge
         webasto.charging_power = P_charge
-        print ("The webasto charge power is: {} kW" .format(webasto.charging_power))   
+        #print ("The webasto charge power is: {} kW" .format(webasto.charging_power))   
         charge_webasto(webasto)
     elif (hbattery.priority):
+        P_charge = 0
         P_grid_charge= 0 
         P_bat_discharge = 0 
         P_feed_in = max(0,P_positive_excess_power - hbattery.max_discharge_power)
@@ -594,6 +643,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
             print("There is no excess power and battery will be charged, as soon as excess PV power is present")
 
     elif (grid_priority):
+        P_charge = 0
         P_grid_charge= 0 
         P_bat_discharge = 0
         if (excess_state == True):
@@ -604,15 +654,16 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     else:
         print("Error: No priority could be set.")
         
-       
+      
     P_grid = P_house + P_grid_charge - P_pv
     
-    print ("The exchanged power with grid for charging is: {} kW" .format(P_grid_charge))
-    print ("Charging power is: {} kW" .format(P_charge))
-    print ("Used battery power for charging is: {} kW" .format(P_bat_discharge))
-    print ("The power is fed into the grid. The feed - in power is: {} kW". format(P_feed_in)) 
-    print ("The total power got from the grid is: {} kW". format(P_grid)) 
-    return
+    #print ("The exchanged power with grid for charging is: {} kW" .format(P_grid_charge))
+    #print ("Charging power is: {} kW" .format(P_charge))
+    #print ("Used battery power for charging is: {} kW" .format(P_bat_discharge))
+    #print ("The power is fed into the grid. The feed - in power is: {} kW". format(P_feed_in)) 
+    #print ("The total power got from the grid is: {} kW". format(P_grid)) 
+    
+    return P_grid, P_grid_charge, P_feed_in, P_charge
 
 def charge_webasto(webasto):
     if (webasto.connection_state == True):
@@ -640,3 +691,4 @@ def charge_openwb(openwb):
         print("Charging station openwb is not controlled by HEMS.")
         print("Openwb charge curret is now:{}" .format(openwb_charge_current))
     return
+
