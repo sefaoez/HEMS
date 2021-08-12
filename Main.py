@@ -10,21 +10,19 @@ import numpy as np
 import logging
 from tabulate import tabulate
 
-
 #--------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
 
-openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False) # (ip, unit_id, max_charge_power, e_demand, e_max_demand, charge_duration, charge_priority, connection_state, charging_state, charged_energy, charging_power, electricity_cheap)
-#openwb = charging_station('192.168.25.10', 1, 11, 0, 0, 0, False, False, 0, 0, 0, False)
+openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False) 
 webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False)
-hbattery = battery (50, 200, 7, 4, False, 0, 0) # (soc, soc_max, soc_min, max_discharge_power, priority, battery_state)
+hbattery = battery (200, 200, 7, 4, False, 0, 0) 
 grid_priority = False
 
 #----------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
 
-results_cars = number_of_cars(openwb,webasto) # (1,True,False)
+
 pv_and_consumption = pd.read_excel(r'C:\Users\soe\Desktop\Input.xlsx') ## Reading inputs document containing solar production and household consumption
 df = pd.read_csv(r'C:\Users\soe\Desktop\Day-ahead Prices_201901010000-202001010000.csv') # Reading electricity prices
-newdf = pd.DataFrame(np.repeat(df.values,60,axis=0)) / 1000 * 100 + 23.37   ## Electricity price in from EUR/MWH to Cent/kWh + Other costst such as grid fees  Source: BDEW year 2019
+newdf = pd.DataFrame(np.repeat(df.values,60,axis=0)) / 1000 * 100 + 23.37   ## Electricity price in from EUR/MWH to Cent/kWh + Other costs such as grid fees  Source: BDEW year 2019
 all_inputs = pd.concat([pv_and_consumption, newdf], axis=1) #Concating all inputs into one dataframe
 
 #----------------------------------------------------------------------------------------------------------------------------------------------#
@@ -32,19 +30,19 @@ all_inputs = pd.concat([pv_and_consumption, newdf], axis=1) #Concating all input
 counter = 0
 total_charging_cost = 0 
 total_charging_profit = 0
+results_cars = number_of_cars(openwb,webasto)
 
 for i in range(all_inputs.shape[0]):
+    i = 540
     sleep(60 -time() % 60) 
     P_pv = all_inputs.iloc[i,1] * 36 * 0.2 / 1000 # Solar prodcution with a PV panel with 36 m2 and 0,2 efficiency in kW
     P_house = all_inputs.iloc[i,2] * 60 # Household energy consumption in kW
     c_elec = all_inputs.iloc[i,3] 
-
     results_cars_last = results_cars
     results_cars = number_of_cars(openwb,webasto)  
     openwb.connection_state = results_cars[1]
     webasto.connection_state = results_cars[2]
     
-
     if results_cars [0] == 0:
         
         grid_priority = priority_check(openwb, webasto, hbattery, grid_priority, results_cars)
@@ -103,12 +101,12 @@ for i in range(all_inputs.shape[0]):
          ["Auto - Angeschlossen", openwb.connection_state, webasto.connection_state], 
          ["Ladevorgang", openwb.charge_priority, webasto.charge_priority], 
          ["Ladeleistung [kW]", openwb.charging_power, webasto.charging_power], 
-         ["PV - Strom Anteil [%]", (openwb.pv_elec / openwb.charging_power) if openwb.charging_power !=0 else 0, (webasto.pv_elec / webasto.charging_power) if webasto.charging_power !=0 else 0],
+         ["PV - Strom Anteil [%]", (openwb.pv_elec / openwb.charging_power) * 100 if openwb.charging_power !=0 else 0, (webasto.pv_elec / webasto.charging_power) if webasto.charging_power !=0 else 0],
          ["Rest - Zeit [m]", openwb.charge_duration - counter if openwb.charge_duration != 0 else 0, webasto.charge_duration - counter if webasto.charge_duration != 0 else 0],
          ["Durchschnittpreis Strom [c./ kWh]", calculated_expensiveness[2], calculated_expensiveness[3]],
          ["Gefragte Energiemenge [kWh]", openwb.e_demand, webasto.e_demand],
          ["Gefragte maximale Energiemenge [kWh]", openwb.e_max_demand, webasto.e_max_demand],
-         ["Ladezustand (Maximale Energie) [%]", (openwb.charged_energy / openwb.e_max_demand) if openwb.e_max_demand != 0 else 0, (webasto.charged_energy / webasto.e_max_demand) if webasto.e_max_demand != 0 else 0 ]]
+         ["Ladezustand (Maximale Energie) [%]", (openwb.charged_energy / openwb.e_max_demand) * 100 if openwb.e_max_demand != 0 else 0, (webasto.charged_energy / webasto.e_max_demand) if webasto.e_max_demand != 0 else 0 ]]
    
     table_charge_stations = tabulate(l, headers =['Ladestationen', 'OpenWB', 'Webasto'], tablefmt='orgtbl')
        
@@ -125,7 +123,7 @@ for i in range(all_inputs.shape[0]):
     n = [["PV Energie Erzeugung [kW]", round(P_pv,2)],
          ["Haushalt Stromverbrauch [kW]", round(P_house,2)],
          ["Heimspeicher Leistung [kW]", round(hbattery.used_power,2)],
-         ["Heimspeicher Ladezustand [%]", round(hbattery.soc / hbattery.soc_max,2)]]
+         ["Heimspeicher Ladezustand [%]", round(hbattery.soc / hbattery.soc_max,2) * 100]]
          
     table_house = tabulate(n, headers =['Haus', 'Wert'], tablefmt='orgtbl')    
     

@@ -14,8 +14,8 @@ webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0,
 #write_register_unint(1, 10151, 1, openwb.unit_id, openwb.ip)
 #write_register_unint(12, 10152, 1, openwb.unit_id, openwb.ip)
 
-#write_register_int_trial(0,112,openwb.unit_id, openwb.ip)
-#write_register_unwrite_register_unint_trial (0,112,openwb.unit_id, openwb.ip)
+#write_register_int(0,112,openwb.unit_id, openwb.ip)
+#write_register_unwrite_register_unint (0,112,openwb.unit_id, openwb.ip)
 
 ###########################Consecutive Reading Register Test ####################################################
 #charge_point_state_webasto = read_register(1000,1,webasto.unit_id,webasto.ip)
@@ -125,7 +125,7 @@ webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0,
 #### Also with 15 seconds, same phenomena can be seen. 
 ###############################################################################
 
-#write_register_unint_trial(0,5004,webasto.unit_id, webasto.ip)
+#write_register_unint(0,5004,webasto.unit_id, webasto.ip)
 #k = read_register(2000,1, webasto.unit_id, webasto.ip)
 #print(k)
 
@@ -161,8 +161,8 @@ webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0,
 #################################################################################################
 
 ########################## Writing function for OpenWB ########################
-#write_register_int_trial(0,112,openwb.unit_id, openwb.ip)
+#write_register_int(0,112,openwb.unit_id, openwb.ip)
 
-write_register_int_trial(8,10152,openwb.unit_id, openwb.ip)
+#write_register_int(8,10152,openwb.unit_id, openwb.ip)
 #### With a delay of 10 seconds, OpenWB correctly 
 ################################################################################################
