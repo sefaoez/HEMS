@@ -14,7 +14,7 @@ from tabulate import tabulate
 
 openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False) 
 webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False)
-hbattery = battery (200, 200, 7, 4, False, 0, 0) 
+hbattery = battery (121, 200, 7, 6, False, 0, 0) 
 grid_priority = False
 
 #----------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
