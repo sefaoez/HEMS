@@ -100,7 +100,7 @@ for i in range(all_inputs.shape[0]):
    
     l = [["HEMS Verbindung", results_cars[3], results_cars[4]], 
          ["Auto - Angeschlossen", openwb.connection_state, webasto.connection_state], 
-         ["Ladepriorität", openwb.charge_priority, webasto.charge_priority], 
+         ["Ladeprioritaet", openwb.charge_priority, webasto.charge_priority], 
          ["Ladeleistung [kW]", openwb.charging_power, webasto.charging_power], 
          ["PV - Strom Anteil [%]", (openwb.pv_elec / openwb.charging_power) * 100 if openwb.charging_power !=0 else 0, (webasto.pv_elec / webasto.charging_power) if webasto.charging_power !=0 else 0],
          ["Rest - Zeit [m]", openwb.charge_duration - counter if openwb.charge_duration != 0 else 0, webasto.charge_duration - counter if webasto.charge_duration != 0 else 0],
