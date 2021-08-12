@@ -33,7 +33,6 @@ total_charging_profit = 0
 results_cars = number_of_cars(openwb,webasto)
 
 for i in range(all_inputs.shape[0]):
-    i = 540
     sleep(60 -time() % 60) 
     P_pv = all_inputs.iloc[i,1] * 36 * 0.2 / 1000 # Solar prodcution with a PV panel with 36 m2 and 0,2 efficiency in kW
     P_house = all_inputs.iloc[i,2] * 60 # Household energy consumption in kW
@@ -48,7 +47,7 @@ for i in range(all_inputs.shape[0]):
         hbattery.battery_state = battery_state_home_battery(hbattery) 
         grid_priority = priority_check(openwb, webasto, hbattery, grid_priority, results_cars)
         calculated_expensiveness = (0,0,0,0)
-        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
+        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority,c_elec)
  
     elif results_cars [0] == 1:
         if (counter == 0 or results_cars != results_cars_last):
@@ -70,9 +69,10 @@ for i in range(all_inputs.shape[0]):
         calculated_expensiveness = electricity_price_expensiveness(c_elec,openwb, webasto, all_inputs, counter)
         openwb.electricity_cheap = calculated_expensiveness[0]
         webasto.electricity_cheap = calculated_expensiveness[1]
-        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
+        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority,c_ele)
 
     elif results_cars [0] == 2:
+        
         if (counter == 0 or results_cars != results_cars_last):
             print("Please enter values for OpenWB first")
             (openwb.e_demand,openwb.e_max_demand, openwb.charge_duration) = read_user_inputs()
@@ -88,7 +88,7 @@ for i in range(all_inputs.shape[0]):
         grid_priority = priority_check(openwb,webasto,hbattery,results_cars, grid_priority)
         openwb.electricity_cheap = calculated_expensiveness[0]
         webasto.electricity_cheap = calculated_expensiveness[1]
-        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)
+        calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority,c_elec)
 
     else:
         print("Error, number of cars don't meet the criterias")

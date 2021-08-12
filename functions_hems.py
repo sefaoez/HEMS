@@ -497,7 +497,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     P_positive_excess_power = (max(0, P_pv - P_house))
     P_feed_in = 0
     
-    while (c_elec >= 0):
+    if (c_elec >= 0):
 
         if (openwb.charge_priority):
         
