@@ -14,7 +14,7 @@ from tabulate import tabulate
 
 openwb = charging_station('192.168.4.1', 1, 8, 0, 0, 0, False, False, 0, 0, 0, 0, False) 
 webasto = charging_station('192.168.123.123', 254, 8, 0, 0, 0, False, False, 0, 0, 0, 0, False)
-hbattery = battery (0, 200, 7, 6, False, 0, 0) 
+hbattery = battery (100, 200, 7, 6, False, 0, 0) 
 grid_priority = False
 
 #----------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
@@ -45,6 +45,7 @@ for i in range(all_inputs.shape[0]):
     
     if results_cars [0] == 0:
         
+        hbattery.battery_state = battery_state_home_battery(hbattery) 
         grid_priority = priority_check(openwb, webasto, hbattery, grid_priority, results_cars)
         calculated_expensiveness = (0,0,0,0)
         calculated_power_values = charging_power_calculation(openwb, webasto, P_pv, P_house, hbattery, grid_priority)

@@ -210,7 +210,7 @@ def battery_state_home_battery(hbattery):
     battery_state = 0
     if hbattery.soc == hbattery.soc_min:
         battery_state = 0 # "empty"
-    elif hbattery.soc_min < hbattery.soc< hbattery.soc_max:
+    elif hbattery.soc_min < hbattery.soc < hbattery.soc_max:
         battery_state= 1 #"between empty and full"
     elif hbattery.soc >= hbattery.soc_max:
         battery_state = 2 # "battery is full"
@@ -247,8 +247,9 @@ def priority_check(openwb, webasto, hbattery, grid_priority, results_cars):
     if (results_cars [0] == 0):
         
         print("There isn't any connected car.")
+        
 
-        if (hbattery.battery_state <2):
+        if (hbattery.battery_state < 2):
 
             print("Home battery is not full. Home battery has the priority." )
             openwb.charge_priority = False
@@ -485,7 +486,7 @@ def electricity_price_expensiveness(c_elec,openwb, webasto, all_inputs, counter)
         webasto_electricity_is_cheap = False
     return (openwb_electricity_is_cheap, webasto_electricity_is_cheap, c_elec_frame_openwb, c_elec_frame_webasto)
 
-def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_priority):
+def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_priority,c_elec):
     
     # This function calculates charging power and battery discharging power based on different conditions.
 
@@ -495,354 +496,365 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     P_charge = 0 
     P_positive_excess_power = (max(0, P_pv - P_house))
     P_feed_in = 0
+    
+    while (c_elec >= 0):
 
-    if (openwb.charge_priority):
+        if (openwb.charge_priority):
         
-        print("Charging power for OpenWB is calculating.")
-        P_bat_discharge = max(0,min(hbattery.max_discharge_power, openwb.max_charge_power - (P_pv - P_house))) # Setting boundaries for P_bat,discharge        
-        P_grid_charge = max(0,openwb.max_charge_power - P_positive_excess_power - P_bat_discharge) # Deciding necessary power from the grid for charging with maximum power
-        #P_feed_in = max(0,P_positive_excess_power - openwb.max_charge_power) # Calculating feed in power for the case that already the excess power might be more than maximum charing power
+            print("Charging power for OpenWB is calculating.")
+            P_bat_discharge = max(0,min(hbattery.max_discharge_power, openwb.max_charge_power - (P_pv - P_house))) # Setting boundaries for P_bat,discharge        
+            P_grid_charge = max(0,openwb.max_charge_power - P_positive_excess_power - P_bat_discharge) # Deciding necessary power from the grid for charging with maximum power
+            #P_feed_in = max(0,P_positive_excess_power - openwb.max_charge_power) # Calculating feed in power for the case that already the excess power might be more than maximum charing power
         
-        if(openwb.charging_state == 0 and excess_state == True and battery_state != 0 and openwb.electricity_cheap == True ):
+            if(openwb.charging_state == 0 and excess_state == True and battery_state != 0 and openwb.electricity_cheap == True ):
             
-            if (P_positive_excess_power > openwb.max_charge_power):
-                P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
+                if (P_positive_excess_power > openwb.max_charge_power):
+                    P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
 
-                if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
+                    if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
                     
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power
                     else:
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power
-                else:
-                    pass
-            else: 
-                print("Car is not charged enough, home battery is not empty, electricity is inexpensive, charge with PV excess, and if needed first with battery and  then grid")
-                P_charge = P_grid_charge + P_positive_excess_power + P_bat_discharge
-                openwb.charged_energy = openwb.charged_energy + P_charge / 60 # Charged energy in a minute in kWh
-                hbattery.soc= hbattery.soc- P_bat_discharge / 60 #  Used battery energy
-
-
-        elif (openwb.charging_state == 0 and excess_state == True and battery_state != 0 and openwb.electricity_cheap == False):
-
-            if (P_positive_excess_power > openwb.max_charge_power):
-                
-                P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
-
-                if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
-                    
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
-                    else:
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power
+                        pass
                 else: 
-                    pass
+                    print("Car is not charged enough, home battery is not empty, electricity is inexpensive, charge with PV excess, and if needed first with battery and  then grid")
+                    P_charge = P_grid_charge + P_positive_excess_power + P_bat_discharge
+                    openwb.charged_energy = openwb.charged_energy + P_charge / 60 # Charged energy in a minute in kWh
+                    hbattery.soc= hbattery.soc- P_bat_discharge / 60 #  Used battery energy
 
-            else:            
-                print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with PV excess and if needed with battery")
-                P_charge = P_positive_excess_power + P_bat_discharge
+
+            elif (openwb.charging_state == 0 and excess_state == True and battery_state != 0 and openwb.electricity_cheap == False):
+
+                if (P_positive_excess_power > openwb.max_charge_power):
+                
+                    P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
+
+                    if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
+                    
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power
+                    else: 
+                        pass
+
+                else:            
+                    print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with PV excess and if needed with battery")
+                    P_charge = P_positive_excess_power + P_bat_discharge
+                    openwb.charged_energy = openwb.charged_energy + P_charge / 60 
+                    hbattery.soc= hbattery.soc- P_bat_discharge / 60
+                P_grid_charge = 0
+
+            elif (openwb.charging_state == 0 and excess_state == True and battery_state == 0 and openwb.electricity_cheap == False):
+
+                if (P_positive_excess_power > openwb.max_charge_power):
+                    P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
+
+                    if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
+                    
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power
+                    else: 
+                        pass
+                else:
+            
+                    print("Car is not charged enough, home battery is empty, electricity is expensive, charge with only PV excess")
+                    P_charge = P_positive_excess_power
+                    openwb.charged_energy = openwb.charged_energy + P_charge / 60 
+                P_bat_discharge = 0
+                P_grid_charge = 0
+
+            elif (openwb.charging_state == 0 and excess_state == True  and battery_state == 0 and openwb.electricity_cheap == True):
+
+                if (P_positive_excess_power > openwb.max_charge_power):
+                    P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
+
+                    if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
+                    
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - openwb.max_charge_power
+                    else: 
+                        pass
+                else:            
+
+                    print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with PV excess and if needed with grid")                 
+                    P_grid_charge = P_grid_charge + P_bat_discharge
+                    P_charge = P_grid_charge + P_positive_excess_power
+                    openwb.charged_energy = openwb.charged_energy + P_charge / 60 
+                P_bat_discharge = 0
+               
+            elif(openwb.charging_state == 0 and excess_state == False and battery_state == 0 and openwb.electricity_cheap == False ):
+           
+               print("Car is not charged enough, home battery is empty, electricity is expensive, no PV excess, don't charge")
+            
+               P_charge = 0
+               P_bat_discharge = 0
+               P_grid_charge = 0
+
+            elif(openwb.charging_state == 0 and excess_state == False and battery_state == 0 and openwb.electricity_cheap == True ):
+            
+                print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with grid")
+                P_grid_charge = openwb.max_charge_power
+                P_charge = P_grid_charge 
+                openwb.charged_energy = openwb.charged_energy + P_charge / 60 
+                P_bat_discharge = 0           
+
+            elif(openwb.charging_state == 0 and excess_state == False and battery_state != 0 and openwb.electricity_cheap == False ):
+            
+                print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with battery ")            
+                P_charge = P_bat_discharge           
                 openwb.charged_energy = openwb.charged_energy + P_charge / 60 
                 hbattery.soc= hbattery.soc- P_bat_discharge / 60
-            P_grid_charge = 0
+                P_grid_charge = 0
 
-        elif (openwb.charging_state == 0 and excess_state == True and battery_state == 0 and openwb.electricity_cheap == False):
+            elif(openwb.charging_state == 0 and excess_state == False and battery_state != 0 and openwb.electricity_cheap == True):
 
-            if (P_positive_excess_power > openwb.max_charge_power):
-                P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
+                print("Car is not charged enough, home battery is not empty, electricity is inexpensive, , charge with battery and if needed with grid")
+                P_bat_discharge = min(hbattery.max_discharge_power, openwb.max_charge_power)
+                P_grid_charge = max(0,openwb.max_charge_power - P_bat_discharge)
+                P_charge = P_grid_charge + P_bat_discharge
+                openwb.charged_energy = openwb.charged_energy + P_charge / 60 
+                hbattery.soc= hbattery.soc - P_bat_discharge / 60 
 
-                if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
-                    
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
-                    else:
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power
-                else: 
-                    pass
+            elif(openwb.charging_state == 1 or 2 and excess_state == True):
+
+                if (P_positive_excess_power > openwb.max_charge_power):
+                
+                    P_feed_in = P_positive_excess_power - openwb.max_charge_power
+                else:             
+                    print("Car is charged enough, excess power is used for charging until totally full")
+                    P_charge = min(openwb.max_charge_power,P_positive_excess_power)
+                    openwb.charged_energy = openwb.charged_energy + P_charge / 60  
+                P_bat_discharge= 0 
+                P_grid_charge = 0 
+                P_charge = 0 
+            
+            
+            elif(openwb.charging_state == 1 or 2 and excess_state == False):
+                print("Car is charged enough, there is no excess power, don't charge")
+                P_bat_discharge= 0 
+                P_grid_charge = 0
+                P_charge = 0
+
             else:
+                print("Error: Charging power for OpenWB couldn't be calculated.")
+        
+            openwb.pv_elec = P_positive_excess_power / P_charge
+            openwb.charging_power = P_charge
+            charge_openwb(openwb)
+
+        elif(webasto.charge_priority):
+        
+            print("Charging power for webasto is calculating.")
+            P_bat_discharge = max(0,min(hbattery.max_discharge_power, webasto.max_charge_power - (P_pv - P_house))) # Setting boundaries for P_bat,discharge        
+            P_grid_charge = max(0,webasto.max_charge_power - P_positive_excess_power - P_bat_discharge) # Deciding necessary power from the grid for charging with maximum power
+            #P_feed_in = max(0,P_positive_excess_power - webasto.max_charge_power) # Calculating feed in power for the case that already the excess power might be more than maximum charing power
+        
+            if(webasto.charging_state == 0 and excess_state == True and battery_state != 0 and webasto.electricity_cheap == True ):
             
-                print("Car is not charged enough, home battery is empty, electricity is expensive, charge with only PV excess")
-                P_charge = P_positive_excess_power
-                openwb.charged_energy = openwb.charged_energy + P_charge / 60 
-            P_bat_discharge = 0
-            P_grid_charge = 0
+                if (P_positive_excess_power > webasto.max_charge_power):
+                    P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
 
-        elif (openwb.charging_state == 0 and excess_state == True  and battery_state == 0 and openwb.electricity_cheap == True):
-
-            if (P_positive_excess_power > openwb.max_charge_power):
-                P_bat_discharge = - (P_positive_excess_power - openwb.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
-
-                if (P_positive_excess_power > openwb.max_charge_power + hbattery.max_discharge_power):
+                    if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
                     
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power - hbattery.max_discharge_power
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power
                     else:
-                        P_feed_in = P_positive_excess_power - openwb.max_charge_power
+                        pass
                 else: 
-                    pass
-            else:            
+                    print("Car is not charged enough, home battery is not empty, electricity is inexpensive, charge with PV excess, and if needed first with battery and  then grid")
+                    P_charge = P_grid_charge + P_positive_excess_power + P_bat_discharge
+                    webasto.charged_energy = webasto.charged_energy + P_charge / 60 # Charged energy in a minute in kWh
+                    hbattery.soc= hbattery.soc- P_bat_discharge / 60 #  Used battery energy
 
-                print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with PV excess and if needed with grid")                 
-                P_grid_charge = P_grid_charge + P_bat_discharge
-                P_charge = P_grid_charge + P_positive_excess_power
-                openwb.charged_energy = openwb.charged_energy + P_charge / 60 
-            P_bat_discharge = 0
-               
-        elif(openwb.charging_state == 0 and excess_state == False and battery_state == 0 and openwb.electricity_cheap == False ):
-           
-           print("Car is not charged enough, home battery is empty, electricity is expensive, no PV excess, don't charge")
-            
-           P_charge = 0
-           P_bat_discharge = 0
-           P_grid_charge = 0
 
-        elif(openwb.charging_state == 0 and excess_state == False and battery_state == 0 and openwb.electricity_cheap == True ):
-            
-            print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with grid")
-            P_grid_charge = openwb.max_charge_power
-            P_charge = P_grid_charge 
-            openwb.charged_energy = openwb.charged_energy + P_charge / 60 
-            P_bat_discharge = 0           
+            elif (webasto.charging_state == 0 and excess_state == True and battery_state != 0 and webasto.electricity_cheap == False):
 
-        elif(openwb.charging_state == 0 and excess_state == False and battery_state != 0 and openwb.electricity_cheap == False ):
-            
-            print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with battery ")            
-            P_charge = P_bat_discharge           
-            openwb.charged_energy = openwb.charged_energy + P_charge / 60 
-            hbattery.soc= hbattery.soc- P_bat_discharge / 60
-            P_grid_charge = 0
-
-        elif(openwb.charging_state == 0 and excess_state == False and battery_state != 0 and openwb.electricity_cheap == True):
-
-            print("Car is not charged enough, home battery is not empty, electricity is inexpensive, , charge with battery and if needed with grid")
-            P_bat_discharge = min(hbattery.max_discharge_power, openwb.max_charge_power)
-            P_grid_charge = max(0,openwb.max_charge_power - P_bat_discharge)
-            P_charge = P_grid_charge + P_bat_discharge
-            openwb.charged_energy = openwb.charged_energy + P_charge / 60 
-            hbattery.soc= hbattery.soc - P_bat_discharge / 60 
-
-        elif(openwb.charging_state == 1 or 2 and excess_state == True):
-
-            if (P_positive_excess_power > openwb.max_charge_power):
+                if (P_positive_excess_power > webasto.max_charge_power):
                 
-                P_feed_in = P_positive_excess_power - openwb.max_charge_power
-            else:             
-                print("Car is charged enough, excess power is used for charging until totally full")
-                P_charge = min(openwb.max_charge_power,P_positive_excess_power)
-                openwb.charged_energy = openwb.charged_energy + P_charge / 60  
-            P_bat_discharge= 0 
-            P_grid_charge = 0 
-            P_charge = 0 
-            
-            
-        elif(openwb.charging_state == 1 or 2 and excess_state == False):
-            print("Car is charged enough, there is no excess power, don't charge")
-            P_bat_discharge= 0 
-            P_grid_charge = 0
-            P_charge = 0
+                    P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
 
-        else:
-            print("Error: Charging power for OpenWB couldn't be calculated.")
-        
-        openwb.pv_elec = P_positive_excess_power / P_charge
-        openwb.charging_power = P_charge
-        charge_openwb(openwb)
-
-    elif(webasto.charge_priority):
-        
-        print("Charging power for webasto is calculating.")
-        P_bat_discharge = max(0,min(hbattery.max_discharge_power, webasto.max_charge_power - (P_pv - P_house))) # Setting boundaries for P_bat,discharge        
-        P_grid_charge = max(0,webasto.max_charge_power - P_positive_excess_power - P_bat_discharge) # Deciding necessary power from the grid for charging with maximum power
-        #P_feed_in = max(0,P_positive_excess_power - webasto.max_charge_power) # Calculating feed in power for the case that already the excess power might be more than maximum charing power
-        
-        if(webasto.charging_state == 0 and excess_state == True and battery_state != 0 and webasto.electricity_cheap == True ):
-            
-            if (P_positive_excess_power > webasto.max_charge_power):
-                P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
-
-                if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
+                    if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
                     
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
-                    else:
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power
+                    else: 
+                        pass
+
+                else:            
+                    print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with PV excess and if needed with battery")
+                    P_charge = P_positive_excess_power + P_bat_discharge
+                    webasto.charged_energy = webasto.charged_energy + P_charge / 60 
+                    hbattery.soc= hbattery.soc- P_bat_discharge / 60
+                P_grid_charge = 0
+
+            elif (webasto.charging_state == 0 and excess_state == True and battery_state == 0 and webasto.electricity_cheap == False):
+
+                if (P_positive_excess_power > webasto.max_charge_power):
+                    P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
+
+                    if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
+                    
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power
+                    else: 
+                        pass
                 else:
-                    pass
-            else: 
-                print("Car is not charged enough, home battery is not empty, electricity is inexpensive, charge with PV excess, and if needed first with battery and  then grid")
-                P_charge = P_grid_charge + P_positive_excess_power + P_bat_discharge
-                webasto.charged_energy = webasto.charged_energy + P_charge / 60 # Charged energy in a minute in kWh
-                hbattery.soc= hbattery.soc- P_bat_discharge / 60 #  Used battery energy
+            
+                    print("Car is not charged enough, home battery is empty, electricity is expensive, charge with only PV excess")
+                    P_charge = P_positive_excess_power
+                    webasto.charged_energy = webasto.charged_energy + P_charge / 60 
+                P_bat_discharge = 0
+                P_grid_charge = 0
 
+            elif (webasto.charging_state == 0 and excess_state == True  and battery_state == 0 and webasto.electricity_cheap == True):
 
-        elif (webasto.charging_state == 0 and excess_state == True and battery_state != 0 and webasto.electricity_cheap == False):
+                if (P_positive_excess_power > webasto.max_charge_power):
+                    P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
 
-            if (P_positive_excess_power > webasto.max_charge_power):
-                
-                P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
-
-                if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
+                    if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
                     
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
-                    else:
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power
-                else: 
-                    pass
+                        while (hbattery.soc != hbattery.soc_max):
+                            P_bat_discharge = hbattery.max_discharge_power
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
+                        else:
+                            P_feed_in = P_positive_excess_power - webasto.max_charge_power
+                    else: 
+                        pass
+                else:            
 
-            else:            
-                print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with PV excess and if needed with battery")
-                P_charge = P_positive_excess_power + P_bat_discharge
+                    print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with PV excess and if needed with grid")                 
+                    P_grid_charge = P_grid_charge + P_bat_discharge
+                    P_charge = P_grid_charge + P_positive_excess_power
+                    webasto.charged_energy = webasto.charged_energy + P_charge / 60 
+                P_bat_discharge = 0
+               
+            elif(webasto.charging_state == 0 and excess_state == False and battery_state == 0 and webasto.electricity_cheap == False ):
+           
+               print("Car is not charged enough, home battery is empty, electricity is expensive, no PV excess, don't charge")
+            
+               P_charge = 0
+               P_bat_discharge = 0
+               P_grid_charge = 0
+
+            elif(webasto.charging_state == 0 and excess_state == False and battery_state == 0 and webasto.electricity_cheap == True ):
+            
+                print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with grid")
+                P_grid_charge = webasto.max_charge_power
+                P_charge = P_grid_charge 
+                webasto.charged_energy = webasto.charged_energy + P_charge / 60 
+                P_bat_discharge = 0           
+
+            elif(webasto.charging_state == 0 and excess_state == False and battery_state != 0 and webasto.electricity_cheap == False ):
+            
+                print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with battery ")            
+                P_charge = P_bat_discharge           
                 webasto.charged_energy = webasto.charged_energy + P_charge / 60 
                 hbattery.soc= hbattery.soc- P_bat_discharge / 60
-            P_grid_charge = 0
+                P_grid_charge = 0
 
-        elif (webasto.charging_state == 0 and excess_state == True and battery_state == 0 and webasto.electricity_cheap == False):
+            elif(webasto.charging_state == 0 and excess_state == False and battery_state != 0 and webasto.electricity_cheap == True):
 
-            if (P_positive_excess_power > webasto.max_charge_power):
-                P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
-
-                if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
-                    
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
-                    else:
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power
-                else: 
-                    pass
-            else:
-            
-                print("Car is not charged enough, home battery is empty, electricity is expensive, charge with only PV excess")
-                P_charge = P_positive_excess_power
+                print("Car is not charged enough, home battery is not empty, electricity is inexpensive, , charge with battery and if needed with grid")
+                P_bat_discharge = min(hbattery.max_discharge_power, webasto.max_charge_power)
+                P_grid_charge = max(0,webasto.max_charge_power - P_bat_discharge)
+                P_charge = P_grid_charge + P_bat_discharge
                 webasto.charged_energy = webasto.charged_energy + P_charge / 60 
-            P_bat_discharge = 0
-            P_grid_charge = 0
+                hbattery.soc= hbattery.soc - P_bat_discharge / 60 
 
-        elif (webasto.charging_state == 0 and excess_state == True  and battery_state == 0 and webasto.electricity_cheap == True):
+            elif(webasto.charging_state == 1 or 2 and excess_state == True):
 
-            if (P_positive_excess_power > webasto.max_charge_power):
-                P_bat_discharge = - (P_positive_excess_power - webasto.max_charge_power)
-                hbattery.soc= hbattery.soc - P_bat_discharge / 60
-
-                if (P_positive_excess_power > webasto.max_charge_power + hbattery.max_discharge_power):
-                    
-                    while (hbattery.soc != hbattery.soc_max):
-                        P_bat_discharge = hbattery.max_discharge_power
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power - hbattery.max_discharge_power
-                    else:
-                        P_feed_in = P_positive_excess_power - webasto.max_charge_power
-                else: 
-                    pass
-            else:            
-
-                print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with PV excess and if needed with grid")                 
-                P_grid_charge = P_grid_charge + P_bat_discharge
-                P_charge = P_grid_charge + P_positive_excess_power
-                webasto.charged_energy = webasto.charged_energy + P_charge / 60 
-            P_bat_discharge = 0
-               
-        elif(webasto.charging_state == 0 and excess_state == False and battery_state == 0 and webasto.electricity_cheap == False ):
-           
-           print("Car is not charged enough, home battery is empty, electricity is expensive, no PV excess, don't charge")
-            
-           P_charge = 0
-           P_bat_discharge = 0
-           P_grid_charge = 0
-
-        elif(webasto.charging_state == 0 and excess_state == False and battery_state == 0 and webasto.electricity_cheap == True ):
-            
-            print("Car is not charged enough, home battery is empty, electricity is inexpensive, charge with grid")
-            P_grid_charge = webasto.max_charge_power
-            P_charge = P_grid_charge 
-            webasto.charged_energy = webasto.charged_energy + P_charge / 60 
-            P_bat_discharge = 0           
-
-        elif(webasto.charging_state == 0 and excess_state == False and battery_state != 0 and webasto.electricity_cheap == False ):
-            
-            print("Car is not charged enough, home battery is not empty, electricity is expensive, charge with battery ")            
-            P_charge = P_bat_discharge           
-            webasto.charged_energy = webasto.charged_energy + P_charge / 60 
-            hbattery.soc= hbattery.soc- P_bat_discharge / 60
-            P_grid_charge = 0
-
-        elif(webasto.charging_state == 0 and excess_state == False and battery_state != 0 and webasto.electricity_cheap == True):
-
-            print("Car is not charged enough, home battery is not empty, electricity is inexpensive, , charge with battery and if needed with grid")
-            P_bat_discharge = min(hbattery.max_discharge_power, webasto.max_charge_power)
-            P_grid_charge = max(0,webasto.max_charge_power - P_bat_discharge)
-            P_charge = P_grid_charge + P_bat_discharge
-            webasto.charged_energy = webasto.charged_energy + P_charge / 60 
-            hbattery.soc= hbattery.soc - P_bat_discharge / 60 
-
-        elif(webasto.charging_state == 1 or 2 and excess_state == True):
-
-            if (P_positive_excess_power > webasto.max_charge_power):
+                if (P_positive_excess_power > webasto.max_charge_power):
                 
-                P_feed_in = P_positive_excess_power - webasto.max_charge_power
-            else:             
-                print("Car is charged enough, excess power is used for charging until totally full")
-                P_charge = min(webasto.max_charge_power,P_positive_excess_power)
-                webasto.charged_energy = webasto.charged_energy + P_charge / 60  
-            P_bat_discharge= 0 
-            P_grid_charge = 0 
-            P_charge = 0 
+                    P_feed_in = P_positive_excess_power - webasto.max_charge_power
+                else:             
+                    print("Car is charged enough, excess power is used for charging until totally full")
+                    P_charge = min(webasto.max_charge_power,P_positive_excess_power)
+                    webasto.charged_energy = webasto.charged_energy + P_charge / 60  
+                P_bat_discharge= 0 
+                P_grid_charge = 0 
+                P_charge = 0 
             
             
-        elif(webasto.charging_state == 1 or 2 and excess_state == False):
-            print("Car is charged enough, there is no excess power, don't charge")
-            P_bat_discharge= 0 
-            P_grid_charge = 0
-            P_charge = 0
+            elif(webasto.charging_state == 1 or 2 and excess_state == False):
+                print("Car is charged enough, there is no excess power, don't charge")
+                P_bat_discharge= 0 
+                P_grid_charge = 0
+                P_charge = 0
 
+            else:
+                print("Error: Charging power for webasto couldn't be calculated.")
+        
+            webasto.pv_elec = P_positive_excess_power / P_charge
+            webasto.charging_power = P_charge
+            charge_webasto(webasto)       
+
+
+        elif (hbattery.priority):
+
+            P_bat_discharge = 0 
+        
+            if(excess_state == True):
+                while (P_positive_excess_power < hbattery.max_discharge_power):
+                    P_bat_discharge = - P_positive_excess_power
+                    hbattery.soc= hbattery.soc - P_bat_discharge / 60
+                    print("Battery is charging with excess power")
+                else:
+                
+                    P_bat_discharge = - hbattery.max_discharge_power
+                    P_feed_in = P_positive_excess_power - hbattery.max_discharge_power
+
+            else: 
+                print("There is no excess power and battery will be charged, as soon as excess PV power is present")
+                P_bat_discharge = min(hbattery.max_discharge_power, P_house - P_pv) if hbattery.soc != 0 else 0            
+            hbattery.soc= hbattery.soc - P_bat_discharge / 60
+            
+
+        elif (grid_priority):
+
+            if (excess_state == True):
+                P_feed_in = P_positive_excess_power
+
+            else: 
+                print("The house doesn't exchange feed-in any power ")
+                P_bat_discharge = P_house - P_pv
+                hbattery.soc= hbattery.soc - P_bat_discharge / 60
         else:
-            print("Error: Charging power for webasto couldn't be calculated.")
+            print("Error: No priority could be set.")
+    else: 
         
-        webasto.pv_elec = P_positive_excess_power / P_charge
-        webasto.charging_power = P_charge
-        charge_webasto(webasto)       
+        P_bat_discharge = hbattery.max_discharge_power
+        openwb.charging_power = openwb.max_charge_power
+        webasto.charging_power = webasto.max_charge_power
 
-
-    elif (hbattery.priority):
-
-        P_charge = 0
-        P_grid_charge= 0 
-        P_bat_discharge = 0 
-        P_feed_in = max(0,P_positive_excess_power - hbattery.max_discharge_power)
-        if(excess_state == True):
-            P_bat_discharge = - min(hbattery.max_discharge_power, P_positive_excess_power)
-            hbattery.soc= hbattery.soc - P_bat_discharge / 60
-            print("Battery is charging with excess power")
-        else: 
-            print("There is no excess power and battery will be charged, as soon as excess PV power is present")
-            P_bat_discharge = min(hbattery.max_discharge_power, P_house - P_pv) if hbattery.soc != 0 else 0            
-            hbattery.soc= hbattery.soc - P_bat_discharge / 60
-            
-
-    elif (grid_priority):
-        P_charge = 0
-        P_grid_charge= 0 
-        P_bat_discharge = 0
-        if (excess_state == True):
-            P_feed_in = P_positive_excess_power
-
-        else: 
-            print("The house doesn't exchange feed-in any power ")
-    else:
-        print("Error: No priority could be set.")
-        
     hbattery.used_power = P_bat_discharge  
     P_grid = P_house + P_grid_charge - P_pv - P_bat_discharge
     
