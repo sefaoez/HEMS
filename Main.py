@@ -12,9 +12,9 @@ from tabulate import tabulate
 
 #--------------------------------- Initialisation of charging stations, battery and grid -----------------------------------------------------------------#
 
-openwb = charging_station('192.168.4.1', 1, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False) 
-webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0, 0, 0, 0, False)
-hbattery = battery (121, 200, 7, 6, False, 0, 0) 
+openwb = charging_station('192.168.4.1', 1, 8, 0, 0, 0, False, False, 0, 0, 0, 0, False) 
+webasto = charging_station('192.168.123.123', 254, 8, 0, 0, 0, False, False, 0, 0, 0, 0, False)
+hbattery = battery (0, 200, 7, 6, False, 0, 0) 
 grid_priority = False
 
 #----------------------------------- Reading the inputs from sheets ----------------------------------------------------------------------#
@@ -99,7 +99,7 @@ for i in range(all_inputs.shape[0]):
    
     l = [["HEMS Verbindung", results_cars[3], results_cars[4]], 
          ["Auto - Angeschlossen", openwb.connection_state, webasto.connection_state], 
-         ["Ladevorgang", openwb.charge_priority, webasto.charge_priority], 
+         ["Ladepriorität", openwb.charge_priority, webasto.charge_priority], 
          ["Ladeleistung [kW]", openwb.charging_power, webasto.charging_power], 
          ["PV - Strom Anteil [%]", (openwb.pv_elec / openwb.charging_power) * 100 if openwb.charging_power !=0 else 0, (webasto.pv_elec / webasto.charging_power) if webasto.charging_power !=0 else 0],
          ["Rest - Zeit [m]", openwb.charge_duration - counter if openwb.charge_duration != 0 else 0, webasto.charge_duration - counter if webasto.charge_duration != 0 else 0],

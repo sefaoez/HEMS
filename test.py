@@ -166,3 +166,5 @@ webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0,
 #write_register_int(8,10152,openwb.unit_id, openwb.ip)
 #### With a delay of 10 seconds, OpenWB correctly 
 ################################################################################################
+
+
