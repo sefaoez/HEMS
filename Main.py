@@ -32,8 +32,8 @@ total_charging_cost = 0
 total_charging_profit = 0
 results_cars = number_of_cars(openwb,webasto)
 
-for i in range(all_inputs.shape[0]):
-   
+for i in range(all_inputs.shape[0]):  
+    
     P_pv = all_inputs.iloc[i,1] * 36 * 0.2 / 1000 # Solar prodcution with a PV panel with 36 m2 and 0,2 efficiency in kW
     P_house = all_inputs.iloc[i,2] * 60 # Household energy consumption in kW
     c_elec = all_inputs.iloc[i,3] 
