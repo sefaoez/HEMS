@@ -32,8 +32,8 @@ total_charging_cost = 0
 total_charging_profit = 0
 results_cars = number_of_cars(openwb,webasto)
 
-for i in range(all_inputs.shape[0]):
-   
+for i in range(all_inputs.shape[0]):  
+    
     P_pv = all_inputs.iloc[i,1] * 36 * 0.2 / 1000 # Solar prodcution with a PV panel with 36 m2 and 0,2 efficiency in kW
     P_house = all_inputs.iloc[i,2] * 60 # Household energy consumption in kW
     c_elec = all_inputs.iloc[i,3] 
@@ -99,32 +99,51 @@ for i in range(all_inputs.shape[0]):
     total_charging_cost = total_charging_cost + charging_cost
     total_charging_profit = total_charging_profit + charging_profit   
    
-    l = [["HEMS Verbindung", results_cars[3], results_cars[4]], 
-         ["Auto - Angeschlossen", openwb.connection_state, webasto.connection_state], 
+    pv_elec_slice_openwb = (openwb.pv_elec / openwb.charging_power) * 100 if openwb.charging_power !=0 else 0
+    pv_elec_slice_webasto = (webasto.pv_elec / webasto.charging_power) if webasto.charging_power !=0 else 0
+    residual_time_openwb = openwb.charge_duration - counter if openwb.charge_duration != 0 else 0
+    residual_time_webasto = webasto.charge_duration - counter if webasto.charge_duration != 0 else 0
+    c_elec_frame_openwb = calculated_expensiveness[2]
+    c_elec_frame_webasto = calculated_expensiveness[3]
+    charging_level_openwb = (openwb.charged_energy / openwb.e_max_demand) * 100 if openwb.e_max_demand != 0 else 0
+    charging_level_webasto = (webasto.charged_energy / webasto.e_max_demand) if webasto.e_max_demand != 0 else 0
+    c_elec_rounded = round(c_elec,2)
+    grid_usage = round(calculated_power_values[0])
+    grid_usage_for_charging = round(calculated_power_values[1])
+    charging_cost_rounded = round(charging_cost,2)
+    charging_profit_rounded = round(charging_profit,2)
+    total_charging_cost_rounded = round(total_charging_cost,2)
+    total_charging_profit_rounded = round(total_charging_profit,2)
+    P_pv_rounded = round(P_pv,2)
+    P_house_rounded = round(P_house,2)
+    used_battery = round(hbattery.used_power,2)
+    battery_soc = round(hbattery.soc / hbattery.soc_max,2) * 100
+    
+    l = [["Auto - Angeschlossen", openwb.connection_state, webasto.connection_state], 
          ["Ladeprioritaet", openwb.charge_priority, webasto.charge_priority], 
          ["Ladeleistung [kW]", openwb.charging_power, webasto.charging_power], 
-         ["PV - Strom Anteil [%]", (openwb.pv_elec / openwb.charging_power) * 100 if openwb.charging_power !=0 else 0, (webasto.pv_elec / webasto.charging_power) if webasto.charging_power !=0 else 0],
-         ["Rest - Zeit [m]", openwb.charge_duration - counter if openwb.charge_duration != 0 else 0, webasto.charge_duration - counter if webasto.charge_duration != 0 else 0],
-         ["Durchschnittpreis Strom [c./ kWh]", calculated_expensiveness[2], calculated_expensiveness[3]],
+         ["PV - Strom Anteil [%]", pv_elec_slice_openwb, pv_elec_slice_webasto ],
+         ["Rest - Zeit [m]", residual_time_openwb, residual_time_webasto],
+         ["Durchschnittpreis Strom [c./ kWh]", c_elec_frame_openwb, c_elec_frame_webasto],
          ["Gefragte Energiemenge [kWh]", openwb.e_demand, webasto.e_demand],
          ["Gefragte maximale Energiemenge [kWh]", openwb.e_max_demand, webasto.e_max_demand],
-         ["Ladezustand (Maximale Energie) [%]", (openwb.charged_energy / openwb.e_max_demand) * 100 if openwb.e_max_demand != 0 else 0, (webasto.charged_energy / webasto.e_max_demand) if webasto.e_max_demand != 0 else 0 ]]
+         ["Ladezustand (Maximale Energie) [%]", charging_level_openwb, charging_level_webasto]]
    
     table_charge_stations = tabulate(l, headers =['Ladestationen', 'OpenWB', 'Webasto'], tablefmt='orgtbl')
        
-    m = [["Aktueller Strompreis [c./ kWh]", round(c_elec,2)],
-         ["Aktuelle Stromnetzverwendung [kW]", round(calculated_power_values[0],2)],
-         ["Aktuelle Stromnetzverwendung für Laden [kW]", round(calculated_power_values[1],2)],
-         ["Aktuelle Ladekosten [€] ", round(charging_cost,2)],
-         ["Aktueller Gewinn durch HEMS [€]", round(charging_profit,2)],
-         ["Gesamte Ladekosten [€]", round(total_charging_cost,2)],
-         ["Gesamter Gewinn durch HEMS [€]", round(total_charging_profit,2)]]
+    m = [["Aktueller Strompreis [c./ kWh]", c_elec_rounded],
+         ["Aktuelle Stromnetzverwendung [kW]", grid_usage],
+         ["Aktuelle Stromnetzverwendung für Laden [kW]", grid_usage_for_charging],
+         ["Aktuelle Ladekosten [€] ", charging_cost_rounded],
+         ["Aktueller Gewinn durch HEMS [€]", charging_profit_rounded],
+         ["Gesamte Ladekosten [€]", total_charging_cost_rounded],
+         ["Gesamter Gewinn durch HEMS [€]", total_charging_profit_rounded]]
          
     table_balance_sheet = tabulate(m, headers =['Bilanz', 'Wert'], tablefmt='orgtbl')
  
-    n = [["PV Energie Erzeugung [kW]", round(P_pv,2)],
-         ["Haushalt Stromverbrauch [kW]", round(P_house,2)],
-         ["Heimspeicher Leistung [kW]", round(hbattery.used_power,2)],
+    n = [["PV Energie Erzeugung [kW]", P_pv_rounded],
+         ["Haushalt Stromverbrauch [kW]", P_house_rounded],
+         ["Heimspeicher Leistung [kW]", used_battery],
          ["Heimspeicher Ladezustand [%]", round(hbattery.soc / hbattery.soc_max,2) * 100]]
          
     table_house = tabulate(n, headers =['Haus', 'Wert'], tablefmt='orgtbl')    

@@ -2,6 +2,7 @@ from pymodbus.constants import Endian
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.client.sync import ModbusTcpClient as ModbusClient
+import time
 import pandas as pd
 import logging
 
@@ -51,6 +52,7 @@ def read_register(address, count, unit, station_ip):
     decoder = BinaryPayloadDecoder.fromRegisters(result.registers, byteorder=Endian.Big, wordorder=Endian.Big)
     decoded = decoder.decode_16bit_uint() 
     charge_station.close()
+    time.sleep(5) ## Time for Modbus Register
     return decoded
 
 def write_register_int(value, address, unit, station_ip):
@@ -64,6 +66,7 @@ def write_register_int(value, address, unit, station_ip):
     registers = builder.to_registers()
     charge_station.write_registers(address, registers, unit=unit)
     charge_station.close
+    time.sleep(5) ## Time for Modbus Register 
 
 def write_register_unint(value, address, unit, station_ip):
     
@@ -76,6 +79,7 @@ def write_register_unint(value, address, unit, station_ip):
     registers = builder.to_registers()
     charge_station.write_registers(address, registers, unit=unit)
     charge_station.close
+    time.sleep(5) ## Time for Modbus Register
 
 def number_of_cars(openwb,webasto):
     
@@ -810,29 +814,19 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     return P_grid, P_grid_charge, P_feed_in, P_charge
 
 def charge_webasto(webasto):
-    if (webasto.connection_state == True):
-        webasto_charge_current = webasto.charging_power / 0.230 ## Converting power to current, 1-phase
-        print("Webasto charge curret is now:{}" .format(webasto_charge_current))
-        write_register_unint(webasto_charge_current, 5004, webasto.unit_id, webasto.ip)
-    else:
-        print ("Connection to webasto is interrupted")
-        webasto_charge_current = 0
-        print("Charging station webasto is not controlled by HEMS.")
-        print("Webasto charge curret is now:{}" .format(webasto_charge_current))
+    
+    webasto_charge_current = webasto.charging_power / 0.230 ## Converting power to current, 1-phase
+    print("Webasto charge curret is now:{}" .format(webasto_charge_current))
+    write_register_unint(webasto_charge_current, 5004, webasto.unit_id, webasto.ip)
+    time.sleep(5)
     return
 
 def charge_openwb(openwb):
-    if (openwb.connection_state == True):
-        openwb_charge_current = openwb.charging_power / 0.230 ## Converting power to current, 1-phase
-        print("Openwb charge curret is now:{}" .format(openwb_charge_current))
-        write_register_int(0, 112, openwb.unit_id, openwb.ip) ## Setting it to Sofort - Laden
-        write_register_int(openwb_charge_current, 10152, openwb.unit_id, openwb.ip) ## Setting the current
-        write_register_int(1, 10151, openwb.unit_id, openwb.ip) ## Enable charge point
-        
-    else:
-        #print ("Connection to webasto is interrupted")
-        openwb_charge_current = 0
-        print("Charging station openwb is not controlled by HEMS.")
-        print("Openwb charge curret is now:{}" .format(openwb_charge_current))
-    return
+    
+    openwb_charge_current = openwb.charging_power / 0.230 ## Converting power to current, 1-phase
+    print("Openwb charge curret is now:{}" .format(openwb_charge_current))
+    write_register_int(0, 112, openwb.unit_id, openwb.ip) ## Setting it to Sofort - Laden
+    write_register_int(openwb_charge_current, 10152, openwb.unit_id, openwb.ip) ## Setting the current
+    write_register_int(1, 10151, openwb.unit_id, openwb.ip) ## Enable charge point
 
+    return
