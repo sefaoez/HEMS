@@ -168,3 +168,6 @@ webasto = charging_station('192.168.123.123', 254, 11, 0, 0, 0, False, False, 0,
 ################################################################################################
 
 
+for i in range(0,100000000):
+    charge_point_state_webasto = read_register(1000,1,webasto.unit_id,webasto.ip)
+    print(charge_point_state_webasto)

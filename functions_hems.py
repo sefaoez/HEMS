@@ -47,124 +47,71 @@ def read_register(address, count, unit, station_ip):
     #slave and client
     
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-    S_connection = False
-    S_register_read = False
-    if (charge_station.connect() == False):
-       
-        decoded = 0
-        
-    else:     
-        
-        S_connection = True
-        result = charge_station.read_holding_registers(address, count,  unit=unit)
-        if (result.isError() == True):
-            
-            decoded = 0
-
-        else:
-            
-            S_register_read = True
-            decoder = BinaryPayloadDecoder.fromRegisters(result.registers, byteorder=Endian.Big, wordorder=Endian.Big)
-            decoded = decoder.decode_16bit_uint() 
-    return decoded, S_register_read, S_connection
+    result = charge_station.read_holding_registers(address, count,  unit=unit)
+    decoder = BinaryPayloadDecoder.fromRegisters(result.registers, byteorder=Endian.Big, wordorder=Endian.Big)
+    decoded = decoder.decode_16bit_uint() 
+    charge_station.close()
+    return decoded
 
 def write_register_int(value, address, unit, station_ip):
-
+    
     # This function writes the "value" in the register, which is located in the "address" for a device with unit number "unit 
     # and device ip "station_ip" as signed integer
-
-    charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-    
-    if (charge_station.connect() == False):
-        pass
-    else:
-        charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-        builder.add_16bit_int(value)		
-        registers = builder.to_registers()
-        charge_station.write_registers(address, registers, unit=unit)
+    value = int(value)
+    charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True) 
+    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+    builder.add_16bit_int(value)		
+    registers = builder.to_registers()
+    charge_station.write_registers(address, registers, unit=unit)
+    charge_station.close
 
 def write_register_unint(value, address, unit, station_ip):
-
+    
     # This function writes the "value" in the register, which is located in the "address" for a device with unit number "unit 
     # and device ip "station_ip" as signed integer
 
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-
-    if (charge_station.connect() == False):
-        pass
-    else: 
-        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-        builder.add_16bit_uint(value)		
-        registers = builder.to_registers()
-        charge_station.write_registers(address, registers, unit=unit)
+    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+    builder.add_16bit_uint(value)		
+    registers = builder.to_registers()
+    charge_station.write_registers(address, registers, unit=unit)
+    charge_station.close
 
 def number_of_cars(openwb,webasto):
     
     #This functions returns the number charging station to which cars are connected "n" and 
     #whether the openWB or Webasto are connected in the connection_state_openwb or connection_state_webasto
         
-    get_register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
-    get_register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip) 
-    openwb_hems_connection_state = get_register_openwb[2]
-    webasto_hems_connection_state =get_register_webasto[2]
-   
-    if (get_register_openwb[2] == True): 
-        
-        if (get_register_openwb[1] == True):
-            
-            register_openwb = get_register_openwb[0]
-            
-        else:
-            
-            register_openwb = 100 # Arbitrary number for error
-
-    else: 
-        
-        register_openwb = 100 # Arbitrary number for error
-           
-      
-    if (get_register_webasto[2] == True):
-        
-        if (get_register_webasto[1] == True):
-            
-            register_webasto = get_register_webasto [0]
-            
-        else:
-            
-            register_webasto = 100 # Arbitrary number for error 
-            
-    else: 
-        
-        register_webasto = 100 # Arbitrary number for error
-          
+    register_openwb = read_register(10114, 1, openwb.unit_id, openwb.ip)
+    register_webasto = read_register(1004, 1, webasto.unit_id, webasto.ip) 
+    print(register_webasto)
+    print(register_openwb)
     connection_state_openwb = False
     connection_state_webasto = False
-    
-    if (register_openwb == 1 and (register_webasto == 2 or register_webasto == 3 or register_webasto == 4 or register_webasto == 5 or register_webasto == 6)):
+
+    if (register_openwb == 1 and (register_webasto == 2 or register_webasto == 3)):
         
         n = 2
         connection_state_openwb = True
         connection_state_webasto = True
     
-    elif (register_openwb == 1 or (register_webasto == 2 or register_webasto == 3 or register_webasto == 4 or register_webasto == 5 or register_webasto == 6)):
+    elif (register_openwb == 1 or (register_webasto == 2 or register_webasto == 3)):
         
         n = 1
        
         if (register_openwb == 1):
            
            connection_state_openwb = True 
-           connection_state_webasto = False
         
         else: 
-            connection_state_openwb = False
+
             connection_state_webasto = True
     else:
-        n = 0
-        connection_state_openwb = False
-        connection_state_webasto = False
 
-    return (n, connection_state_openwb, connection_state_webasto, openwb_hems_connection_state, webasto_hems_connection_state)
+        n = 0
+        
+
+    return (n, connection_state_openwb, connection_state_webasto)
 
 def pv_excess_power(P_pv, P_house):
 
@@ -190,6 +137,7 @@ def read_user_inputs():
     # In case the E_max_demand is smaller than E_demand it returns the error and asks for the values again. 
 
     wrong_input = True
+    
     while wrong_input:
         
         E_demand = int(input("Please specify the requested charging energy kWh: "))
@@ -500,6 +448,7 @@ def charging_power_calculation(openwb, webasto,P_pv, P_house, hbattery, grid_pri
     if (c_elec >= 0):
 
         if (openwb.charge_priority):
+
         
             print("Charging power for OpenWB is calculating.")
             P_bat_discharge = max(0,min(hbattery.max_discharge_power, openwb.max_charge_power - (P_pv - P_house))) # Setting boundaries for P_bat,discharge        
