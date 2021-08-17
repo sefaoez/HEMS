@@ -1,8 +1,7 @@
 # HEMS
 
-This repo is created to implement a HEMS solution through Modbus.
+This project is created to implement a HEMS solution through Modbus. Two charing stations WebAsto and OpenWB are controlled by a rule-based scheduling technique. 
 
-Function_hems contains the necessary functions for the algorithm.
+The results are shown in HTML document
 
-Main cals the functions from Function_hems and implement the logic in a for - loop
 
