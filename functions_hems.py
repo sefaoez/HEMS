@@ -61,24 +61,34 @@ def write_register_int(value, address, unit, station_ip):
     # and device ip "station_ip" as signed integer
     value = int(value)
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True) 
-    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_int(value)		
-    registers = builder.to_registers()
-    charge_station.write_registers(address, registers, unit=unit)
-    charge_station.close
+    if (charge_station.is_socket_open() == False):
+        #print("Socket is closed")
+        charge_station.connect
+    else:
+        #print("socket is open")
+        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+        builder.add_16bit_int(value)		
+        registers = builder.to_registers()
+        charge_station.write_registers(address, registers, unit=unit)
+        charge_station.close
     time.sleep(5) ## Time for Modbus Register 
 
 def write_register_unint(value, address, unit, station_ip):
     
     # This function writes the "value" in the register, which is located in the "address" for a device with unit number "unit 
     # and device ip "station_ip" as signed integer
-
+    value = int(value)
     charge_station = ModbusClient(station_ip, port=502, unit_id=unit, auto_open=True, auto_close=True)
-    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
-    builder.add_16bit_uint(value)		
-    registers = builder.to_registers()
-    charge_station.write_registers(address, registers, unit=unit)
-    charge_station.close
+    if (charge_station.is_socket_open() == False):
+        #print("Socket is closed")
+        charge_station.connect
+    else:
+        #print("socket is open")
+        builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+        builder.add_16bit_uint(value)		
+        registers = builder.to_registers()
+        charge_station.write_registers(address, registers, unit=unit)
+        charge_station.close
     time.sleep(5) ## Time for Modbus Register
 
 def number_of_cars(openwb,webasto):
