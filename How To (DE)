@@ -1,0 +1,19 @@
+Dieses Dokument erklärt, wie man das Skript laufen kann. 
+
+Beim "Reading the inputs from sheets" Teil von Main.py liest das Skript gegebenfalls zwei .csv Dateien, die auch in dem Repo zu finden sind. 
+Das Skript liest in Main.py die ganze Dateien und schreibt diese in einem Pandas-Data-Frame. (Nimmt bei Initiliasierung daher viel Zeit, da die Dateien ziemlich groß sind.) 
+
+Für spätere Verwendungen soll man vor dem Kompelieren darauf achten, ob der Datenpfad im lokalen Rechner stimmt, da sonst das Skript diese .csv Dateien nicht in Bezug nehmen kann. 
+Jede Minute sind diese Werte gelesen und zur nächsten Zeile bei der nächsten Iteration gesprungen. Die abgelesene Werte sind nicht genau die PV - Leistung und Strompreis,
+sondern die Strahliung und Preis im Strommarkt (ohne Umlagen). Daher sind diese Werte ebenfalls in Main.py umgerechnet. 
+
+Zweitens sollte man beachten, dass die IP - Adressen und Slave - IDs stimmen, die beim "Initialisation of charging stations, battery and grid" eingegeben werden. 
+Diese Werte sind von der Anleitung der Hersteller zu kriegen, ggf. soll der Hersteller darüber kontaktiert werden. 
+
+Dann läuft das Skript die Logik, die in Image.png gezeigt ist. 
+
+Beim Lesen, sowie Schreiben von Register, soll man die Registernummern entsprechend anpassen. Die Funktionen fürs Schreiben, sowie Lesen sind schon in fucntions_hems eingelegt.
+Hier sind unterschieldiche Register Types zu unterscheiden. Abhängig davon, ob ein Signed oder Unsigned Wert oder 16bit oder 32bit verwendet soll, soll man die geignete Funktion
+abrufen, bzw. anpassen. 
+
+Für sonstige mögliche Fehler soll man Modbus Protokl, sowie PyModbus verwenden.
